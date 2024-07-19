@@ -1,10 +1,7 @@
 import express from 'express';
 import 'dotenv/config';
-import multer from 'multer';
 import { hallEnquiriesController } from '../../controllers/v1/hall-enquiries-controller.js';
 
-// * Multer configuration
-const upload = multer();
 
 // * Create a router for hall-enquiries APIs
 const hallEnquiriesRouter = express.Router();
