@@ -10,6 +10,8 @@ import { articlesRouter } from './v1/articles-routes.js';
 import { magazineRouter } from './v1/magazine-routes.js';
 import { newsletterRouter } from './v1/newsletter-routes.js';
 import { publicationsRouter } from './v1/publications-routes.js';
+import { bannerRouter } from './v1/banners-routes.js';
+import { authRouter } from './v1/auth-routes.js';
 
 // * Create a router for version 1 APIs
 const v1Router = express.Router();
@@ -27,6 +29,8 @@ v1Router.use('/article', articlesRouter);
 v1Router.use('/magazine', magazineRouter);
 v1Router.use('/newsletter', newsletterRouter);
 v1Router.use('/publications', publicationsRouter);
+v1Router.use('/banners', bannerRouter);
+v1Router.use('/auth', authRouter);
 
 // ? Export the v1Router
 export { v1Router };
