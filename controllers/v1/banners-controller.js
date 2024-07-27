@@ -1,0 +1,145 @@
+import mongoose from "mongoose";
+import { Banners } from "../../models/banners-model.js";
+import { commonController } from "./common-controller.js";
+import { isValidObjectId } from "mongoose";
+import 'dotenv/config';
+
+const { ObjectId } = mongoose.Types;
+
+const bannerController = {};
+
+// * Function to save banners to MongoDB
+bannerController.saveGalleryToDB = async (name, fileUrl, fileName) => {
+    const collection = mongoose.connection.collection(process.env.BANNERS_COLLECTION_NAME);
+
+    const metadata = new Banners({
+        name: name,
+        fileUrl: fileUrl,
+        fileName: fileName
+    });
+
+    await collection.insertOne(metadata);
+}
+
+// * Function to add file in banners collection
+bannerController.uploadBanner = async (req, res) => {
+    try {
+        const name = req.body.name;
+        const file = req.file;
+
+        const { publicUrl: fileUrl, fileName } = await commonController.uploadFileToFirebase(file, process.env.BANNERS_FOLDER_PATH);
+
+        console.log(fileUrl, fileName);
+        await bannerController.saveGalleryToDB(name, fileUrl, fileName);
+
+        return res.status(201).json({ message: 'File uploaded to gallery successfully' });
+    } catch (error) {
+        console.log(error);
+        return res.status(500).json({ message: 'Internal server error' });
+    }
+}
+
+// * Function to get all files in banners collection
+bannerController.getAllBanners = async (req, res) => {
+    try {
+        const collection = mongoose.connection.collection(process.env.BANNERS_COLLECTION_NAME);
+
+        const banners = await collection.find().sort({ createdAt: -1 }).toArray();
+
+        return res.status(200).json({ banners : banners });
+    } catch (error) {
+        console.log(error);
+        return res.status(500).json({ message: 'Internal server error' });
+    }
+}
+
+// * Function to get file by id from banners
+bannerController.getBannerById = async (req, res) => {
+    try {
+        const id = req.params.bannerId;
+
+        if (!isValidObjectId(id)) {
+            return res.status(400).json({ message: 'Invalid id' });
+        }
+
+        const collection = mongoose.connection.collection(process.env.BANNERS_COLLECTION_NAME);
+
+        const banners = await collection.findOne({ _id: new ObjectId(id) });
+
+        if (!banners) {
+            return res.status(404).json({ message: 'Banner not found' });
+        }
+
+        return res.status(200).json(banners);
+    } catch (error) {
+        console.log(error);
+        return res.status(500).json({ message: 'Internal server error' });
+    }
+}
+
+// * Function to delete file from banners collection
+bannerController.deleteBannerById = async (req, res) => {
+    try {
+        const id = req.params.bannerId;
+
+        if (!isValidObjectId(id)) {
+            return res.status(400).json({ message: 'Invalid id' });
+        }
+
+        const collection = mongoose.connection.collection(process.env.BANNERS_COLLECTION_NAME);
+
+        const banners = await collection.findOne({ _id: new ObjectId(id) });
+
+        if (!banners) {
+            return res.status(404).json({ message: 'Banner not found' });
+        }
+
+        await commonController.deleteFileFromFirebase(`${banners.fileName}`);
+
+        await collection.deleteOne({ _id: new ObjectId(id) });
+
+        return res.status(200).json({ message: 'Banner deleted successfully' });
+    } catch (error) {
+        console.log(error);
+        return res.status(500).json({ message: 'Internal server error' });
+    }
+}
+
+// * Function to update file in Banner collection
+bannerController.updateBannerById = async (req, res) => {
+    try {
+        const id = req.params.bannerId;
+        const name = req.body.name;
+        const file = req.file;
+
+        if (!isValidObjectId(id)) {
+            return res.status(400).json({ message: 'Invalid id' });
+        }
+
+        const collection = mongoose.connection.collection(process.env.BANNERS_COLLECTION_NAME);
+
+        const banners = await collection.findOne({ _id: new ObjectId(id) });
+
+        if (!banners) {
+            return res.status(404).json({ message: 'Gallery not found' });
+        }
+
+        if (file) {
+            await commonController.deleteFileFromFirebase(`${banners.fileName}`);
+
+            const { publicUrl: fileUrl, fileName } = await commonController.uploadFileToFirebase(file, process.env.BANNERS_FOLDER_PATH);
+
+            await collection.updateOne({ _id: new ObjectId(id) }, { $set: { name: name, fileUrl: fileUrl, fileName: fileName } });
+        } else {
+            await collection.updateOne({ _id: new ObjectId(id) }, { $set: { name: name } });
+        }
+
+        return res.status(200).json({ message: 'Banner updated successfully' });
+    } catch (error) {
+        console.log(error);
+        return res.status(500).json({ message: 'Internal server error' });
+    }
+}
+
+// ? Export the galleryController object
+export { bannerController };

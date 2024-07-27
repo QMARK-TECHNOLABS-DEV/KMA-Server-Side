@@ -2,6 +2,7 @@ import express from 'express';
 import 'dotenv/config';
 import multer from 'multer';
 import { galleryController } from '../../controllers/v1/gallery-controller.js';
+import { authMiddleware } from '../../middlewares/auth-middleware.js';
 
 // * Multer configuration
 const upload = multer();
@@ -11,14 +12,16 @@ const galleryRouter = express.Router();
 
 // * Defining the routes for gallery
 
-galleryRouter.post('', upload.single('file'), galleryController.createGallery);
-
+// * Routes for client side (unprotected routes)
 galleryRouter.get('', galleryController.getAllGallery);
-
 galleryRouter.get('/:galleryId', galleryController.getGalleryById);
 
-galleryRouter.delete('/:galleryId', galleryController.deleteGalleryById);
+// * Middleware to check the authentication
+galleryRouter.use(authMiddleware);
 
+// * Routes for Admin Dashboard (protected routes)
+galleryRouter.post('', upload.single('file'), galleryController.createGallery);
+galleryRouter.delete('/:galleryId', galleryController.deleteGalleryById);
 galleryRouter.put('/:galleryId', upload.single('file'), galleryController.updateGalleryById);
 
 // ? Export the galleryRouter

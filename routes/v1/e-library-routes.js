@@ -2,7 +2,7 @@ import express from 'express';
 import 'dotenv/config';
 import { eLibraryController } from '../../controllers/v1/e-library-controller.js';
 import multer from 'multer';
-
+import { authMiddleware } from '../../middlewares/auth-middleware.js';
 // * Multer configuration
 const upload = multer();
 
@@ -11,9 +11,15 @@ const eLibraryRouter = express.Router();
 
 // * Defining the routes for e-library
 
-eLibraryRouter.post('', upload.fields([{ name: 'coverImage', maxCount: 1 }, { name: 'file', maxCount: 1 }]), eLibraryController.uploadDocument);
+// * Routes for client side (unprotected routes)
 eLibraryRouter.get('', eLibraryController.getAllDocuments);
 eLibraryRouter.get('/:documentId', eLibraryController.getDocumentById);
+
+// * Middleware to check the authentication
+eLibraryRouter.use(authMiddleware);
+
+// * Routes for Admin Dashboard (protected routes)
+eLibraryRouter.post('', upload.fields([{ name: 'coverImage', maxCount: 1 }, { name: 'file', maxCount: 1 }]), eLibraryController.uploadDocument);
 eLibraryRouter.delete('/:documentId', eLibraryController.deleteDocumentById);
 eLibraryRouter.put('/:documentId', upload.fields([{ name: 'coverImage', maxCount: 1 }, { name: 'file', maxCount: 1 }]), eLibraryController.updateDocumentById);
 
