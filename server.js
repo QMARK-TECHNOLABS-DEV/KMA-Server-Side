@@ -23,6 +23,9 @@ app.use(morgan('combined'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
+const ClientURL = process.env.ClientURL;
+const ClientURL2 = process.env.ClientURL2;
+
 // * Define the URLs for CORS
 const corsOptions = {
     credentials: true,
