@@ -1,6 +1,6 @@
 import jwt from 'jsonwebtoken';
 
-const expiryAccessToken = "1h";
+const expiryAccessToken = "1d";
 const expiryRefreshToken = "7d";
 
 const maxAgeAccessCookie = 1000 * 60 * 60;

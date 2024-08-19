@@ -12,7 +12,7 @@ const authMiddleware = async (req, res, next) => {
     jwt.verify(acccessToken, process.env.ACCESS_TOKEN_SECRET, (err, user) => {
         if (err) {
             // The access token is expired/invalid
-            res.status(403).json({ msg: "Invalid Access token"});
+            res.status(401).json({ msg: "Invalid Access token"});
 
         } else {
             if (user.role !== 'admin') {
