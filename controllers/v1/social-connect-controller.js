@@ -1,5 +1,5 @@
 import mongoose from "mongoose";
-import { isValidObjectId } from "mongoose";
+import { isValidObjectId} from "mongoose";
 import 'dotenv/config';
 import { SocialConnects, Platform } from "../../models/social-connect-model.js";
 import { commonController } from "./common-controller.js";
@@ -184,7 +184,7 @@ socialConnectController.updateSocialConnectById = async (req, res) => {
 
         const platformCollection = mongoose.connection.collection(process.env.PLATFORM_COLLECTION_NAME);
 
-        const platformData = await platformCollection.findOne({ name : platform });
+        const platformData = await platformCollection.findOne({ _id : new ObjectId(platform)  });
 
         if (!platformData) {
             return res.status(404).json({ message: 'Platform not found' });
