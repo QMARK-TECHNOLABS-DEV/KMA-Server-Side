@@ -125,17 +125,27 @@ reportsController.updateReportById = async (req, res) => {
         let fileName = report.fileName;
 
         if (coverImage) {
-            await commonController.deleteFileFromFirebase(report.coverImageFileName);
+            try {
+                await commonController.deleteFileFromFirebase(report.coverImageFileName);
+                
+            } catch (error) {
+                console.log(error)
+            }
             const { publicUrl, fileName } = await commonController.uploadFileToFirebase(coverImage, process.env.REPORTS_COVER_FOLDER_PATH);
             coverImageUrl = publicUrl;
             coverImageName = fileName;
         }
 
         if (file) {
-            await commonController.deleteFileFromFirebase(report.fileName);
-            const { publicUrl, fileName } = await commonController.uploadFileToFirebase(file, process.env.REPORTS_FOLDER_PATH);
+            try {
+                await commonController.deleteFileFromFirebase(report.fileName);
+                
+            } catch (error) {
+                console.log(error)
+            }
+            const { publicUrl, fileName : newFileName } = await commonController.uploadFileToFirebase(file, process.env.REPORTS_FOLDER_PATH);
             fileUrl = publicUrl;
-            fileName = fileName;
+            fileName = newFileName;
         }
 
         await collection.updateOne({ _id: new ObjectId(id) }, { $set: { title: title, fileUrl: fileUrl, fileName: fileName, coverImageUrl: coverImageUrl, coverImageFileName: coverImageName } });

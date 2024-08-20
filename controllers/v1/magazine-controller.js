@@ -138,14 +138,24 @@ magazineController.updateMagazineById = async (req, res) => {
         let coverImageFileName = magazine.coverImageFileName;
 
         if (file) {
-            await commonController.deleteFileFromFirebase(magazine.fileName);
-            const { publicUrl, fileName } = await commonController.uploadFileToFirebase(file, process.env.MAGAZINE_FOLDER_PATH);
+            try {
+                await commonController.deleteFileFromFirebase(magazine.fileName);
+                
+            } catch (error) {
+                console.log(error)
+            }
+            const { publicUrl, fileName : newFileName } = await commonController.uploadFileToFirebase(file, process.env.MAGAZINE_FOLDER_PATH);
             fileUrl = publicUrl;
-            fileName = fileName;
+            fileName = newFileName;
         }
 
         if (coverImage) {
-            await commonController.deleteFileFromFirebase(magazine.coverImageFileName);
+            try {
+                await commonController.deleteFileFromFirebase(magazine.coverImageFileName);
+                
+            } catch (error) {
+                console.log(error)
+            }
             const { publicUrl, fileName } = await commonController.uploadFileToFirebase(coverImage, process.env.MAGAZINE_COVER_FOLDER_PATH);
             coverImageUrl = publicUrl;
             coverImageFileName = fileName;
