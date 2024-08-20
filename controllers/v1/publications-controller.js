@@ -140,9 +140,9 @@ publicationsController.updatePublicationById = async (req, res) => {
 
         if (file) {
             await commonController.deleteFileFromFirebase(fileName);
-            const { publicUrl, fileName } = await commonController.uploadFileToFirebase(file, process.env.PUBLICATIONS_FOLDER_PATH);
+            const { publicUrl, fileName : newFileName } = await commonController.uploadFileToFirebase(file, process.env.PUBLICATIONS_FOLDER_PATH);
             fileUrl = publicUrl;
-            fileName = fileName;
+            fileName = newFileName;
         }
 
         if (coverImage) {
