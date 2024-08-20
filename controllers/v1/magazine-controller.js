@@ -99,8 +99,13 @@ magazineController.deleteMagazineById = async (req, res) => {
             return res.status(404).json({ message: 'Magazine not found' });
         }
 
-        await commonController.deleteFileFromFirebase(magazine.fileName);
-        await commonController.deleteFileFromFirebase(magazine.coverImageFileName);
+        try {
+            await commonController.deleteFileFromFirebase(magazine.fileName);
+            await commonController.deleteFileFromFirebase(magazine.coverImageFileName);
+            
+        } catch (error) {
+            console.log(error)
+        }
 
         await collection.deleteOne({ _id: new ObjectId(id) });
 

@@ -91,8 +91,13 @@ reportsController.deleteReportById = async (req, res) => {
         const report = await collection.findOne({ _id: new ObjectId(id) });
         if (!report) return res.status(404).json({ message: 'Report not found' });
 
-        await commonController.deleteFileFromFirebase(report.fileName);
-        await commonController.deleteFileFromFirebase(report.coverImageFileName);
+        try {
+            await commonController.deleteFileFromFirebase(report.fileName);
+            await commonController.deleteFileFromFirebase(report.coverImageFileName);
+            
+        } catch (error) {
+            console.log(error)
+        }
 
         await collection.deleteOne({ _id: new ObjectId(id) });
 
