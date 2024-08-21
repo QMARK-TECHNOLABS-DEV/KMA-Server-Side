@@ -76,7 +76,7 @@ authController.adminLogin = async(req, res) => {
 
         const { password, ...userInfo } = user;
 
-        res.status(200).json({name : userInfo.name, accessToken, refreshToken})
+        res.status(200).json({userInfo : userInfo, accessToken, refreshToken})
 
     } catch (error) {
         console.error(error)
@@ -108,6 +108,8 @@ authController.regenerateAccessToken = async (req, res) => {
         const accessToken = generateAccessToken({ userId: user._id, role: user.role });
 
         const refreshToken = generateRefreshToken({ userId: user._id, role: user.role })
+
+        console.log({'Access Token ': accessToken })
 
         res.status(200).json({accessToken , refreshToken});
     })

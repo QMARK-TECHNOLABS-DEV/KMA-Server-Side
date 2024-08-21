@@ -2,7 +2,7 @@ import mongoose from "mongoose";
 
 // * Define the schema for the reports collection
 const reportSchema = new mongoose.Schema({
-    name: {
+    title: {
         type: String,
         required: true
     },

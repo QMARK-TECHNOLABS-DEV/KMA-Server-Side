@@ -9,6 +9,6 @@ authRouter.get("/logout", authController.adminLogout)
 authRouter.post("/admin/signup", authController.adminSignup)
 
 // * Token refresh route (Add refresh token in the request body)
-authRouter.get("/regenerate", authController.regenerateAccessToken)
+authRouter.post("/regenerate", authController.regenerateAccessToken)
 
 export { authRouter };
