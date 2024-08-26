@@ -38,5 +38,7 @@ v1Router.use('/auth', authRouter);
 v1Router.use('/application', applicationRouter);
 v1Router.use('/member', memberRouter);
 
+v1Router.use('*', (req,res)=> console.log('Invalid Route'));
+
 // ? Export the v1Router
 export { v1Router };
