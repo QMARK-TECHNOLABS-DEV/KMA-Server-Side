@@ -4,6 +4,7 @@ import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import dotenv from 'dotenv';
 import mongoose from 'mongoose';
+import { Member } from '../../models/MemberModel.js';
 dotenv.config();
 
 // creating a controller object authController
@@ -113,6 +114,33 @@ authController.regenerateAccessToken = async (req, res) => {
 
         res.status(200).json({accessToken , refreshToken});
     })
+}
+
+
+
+authController.MemberLogin = async (req, res) => {
+    
+    try {
+        const username = req.body.username;
+
+        const user = await Member.findOne({ username: username, isActive:true }).lean();
+        if (!user) return res.status(401).json({ msg: "Invalid username or password" })
+
+        const isValidPassword = await bcrypt.compare(req.body.password, user.password);
+        if (!isValidPassword) return res.status(401).json({ msg: "Invalid username or password" });
+
+        const accessToken = generateAccessToken({ userId: user._id, role: user.role })
+
+        const refreshToken = generateRefreshToken({ userId: user._id, role: user.role })
+
+        const { password, ...userInfo } = user;
+
+        res.status(200).json({ userInfo, accessToken, refreshToken })
+
+    } catch (error) {
+        console.error(error)
+        res.status(500).json({ msg: "Something went wrong" })
+    }
 }
 
 // ? Exporting the authController object
