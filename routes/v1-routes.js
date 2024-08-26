@@ -12,6 +12,8 @@ import { newsletterRouter } from './v1/newsletter-routes.js';
 import { publicationsRouter } from './v1/publications-routes.js';
 import { bannerRouter } from './v1/banners-routes.js';
 import { authRouter } from './v1/auth-routes.js';
+import { applicationRouter } from './v1/application-routes.js';
+import { memberRouter } from './v1/member-routes.js';
 
 // * Create a router for version 1 APIs
 const v1Router = express.Router();
@@ -31,6 +33,8 @@ v1Router.use('/newsletter', newsletterRouter);
 v1Router.use('/publications', publicationsRouter);
 v1Router.use('/banners', bannerRouter);
 v1Router.use('/auth', authRouter);
+v1Router.use('/application', applicationRouter);
+v1Router.use('/member', memberRouter);
 
 // ? Export the v1Router
 export { v1Router };
