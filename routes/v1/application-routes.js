@@ -4,7 +4,7 @@ import { authMiddleware } from "../../middlewares/auth-middleware.js";
 
 const applicationRouter = express.Router();
 
-// applicationRouter.use(authMiddleware)
+applicationRouter.use(authMiddleware)
 
 applicationRouter.get('/:id', applicationCtrl.GetApplication)
 applicationRouter.get('', applicationCtrl.GetAllApplications)
