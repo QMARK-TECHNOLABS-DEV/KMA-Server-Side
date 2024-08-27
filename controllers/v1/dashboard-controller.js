@@ -6,6 +6,9 @@ import utc from 'dayjs/plugin/utc.js';
 import timezone from 'dayjs/plugin/timezone.js';
 import { Application } from '../../models/ApplicationModel.js';
 import { HallEnquiry } from '../../models/hall-enquiries-model.js';
+import { Event } from '../../models/events-model.js';
+import { Reports } from '../../models/reports-model.js';
+import { Magazines } from '../../models/magazine-model.js';
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -78,7 +81,40 @@ dashCtrl.memberChart = async (req, res) => {
 
 dashCtrl.analytics = async (req, res) => {
     try {
+        const { date } = req.query
 
+        const filter = {}
+
+        if (date) {
+            const parsedDate = dayjs(date, 'DD-MM-YYYY');
+
+            const startOfDay = parsedDate.startOf('day').toISOString();
+            const endOfDay = parsedDate.endOf('day').toISOString();
+
+            filter.createdAt = {
+                $gte: startOfDay,
+                $lt: endOfDay
+            }
+
+        }
+
+        const applicationCount = await Application.countDocuments(filter);
+        const memberCount = await Member.countDocuments(filter);
+        const eventCount = await Event.countDocuments(filter);
+        const enquiryCount = await HallEnquiry.countDocuments(filter);
+        const reportCount = await Reports.countDocuments(filter);
+        const magazineCount = await Magazines.countDocuments(filter);
+
+        const result = [
+            { label: 'application', count: applicationCount },
+            { label: 'member', count: memberCount },
+            { label: 'event', count: eventCount },
+            { label: 'enquiry', count: enquiryCount },
+            { label: 'report', count: reportCount },
+            { label: 'magazine', count: magazineCount },
+        ]
+
+        res.status(200).json({ result })
 
     } catch (error) {
         console.log(error)
@@ -92,17 +128,17 @@ dashCtrl.recentUpdates = async (req, res) => {
         const endOfDay = dayjs().endOf('day').toISOString();
 
         const applicationCount = await Application.countDocuments({
-            status:'pending',
+            status: 'pending',
             createdAt: {
-                $gte: startOfDay, 
-                $lt: endOfDay    
+                $gte: startOfDay,
+                $lt: endOfDay
             }
         })
 
         const enquiryCount = await HallEnquiry.countDocuments({
             createdAt: {
-                $gte: startOfDay, 
-                $lt: endOfDay    
+                $gte: startOfDay,
+                $lt: endOfDay
             }
         })
 
@@ -110,7 +146,7 @@ dashCtrl.recentUpdates = async (req, res) => {
             applicationCount, enquiryCount
         }
 
-        res.status(200).json({result})
+        res.status(200).json({ result })
 
     } catch (error) {
         console.log(error)
