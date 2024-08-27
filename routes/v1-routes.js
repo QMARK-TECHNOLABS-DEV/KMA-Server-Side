@@ -15,6 +15,7 @@ import { authRouter } from './v1/auth-routes.js';
 import { applicationRouter } from './v1/application-routes.js';
 import { memberRouter } from './v1/member-routes.js';
 import { guestRouter } from './v1/guest-routes.js';
+import { dashRouter } from './v1/dashboard-routes.js';
 
 // * Create a router for version 1 APIs
 const v1Router = express.Router();
@@ -37,6 +38,7 @@ v1Router.use('/banners', bannerRouter);
 v1Router.use('/auth', authRouter);
 v1Router.use('/application', applicationRouter);
 v1Router.use('/member', memberRouter);
+v1Router.use('/dashboard', dashRouter);
 
 v1Router.use('*', (req,res)=> console.log('Invalid Route'));
 
