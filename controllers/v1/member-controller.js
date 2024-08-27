@@ -101,6 +101,8 @@ memberCtrl.ChangeMemberActiveStatus = async (req, res) => {
 
         const { isActive } = req.body;
 
+        if(typeof isActive !== 'boolean') { return res.status(400).json({ msg: "Invalid value" }) }
+
         const member = await Member.findByIdAndUpdate(Id, {
             $set: { isActive }
         }, { new: true });

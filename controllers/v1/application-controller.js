@@ -1,6 +1,6 @@
 import { isValidObjectId } from "mongoose";
-import {Application} from "../../models/ApplicationModel.js";
-import {Member} from "../../models/MemberModel.js";
+import { Application } from "../../models/ApplicationModel.js";
+import { Member } from "../../models/MemberModel.js";
 
 const applicationCtrl = {};
 
@@ -66,6 +66,10 @@ applicationCtrl.UpdateMembershipStatus = async (req, res) => {
             return res.status(500).json({ msg: 'Failed to update Membership status' });
         }
 
+        const memberExistsForApln = await Member.findOne({ applicationId: application?._id })
+
+        if (memberExistsForApln) { return res.status(409).json({ msg: 'Member already exist' }) }
+
         if (status === "approved") {
             const { _id, status, payMode, hasRenewalPay, createdAt, updatedAt, ...memberObj } = application;
 
@@ -88,4 +92,4 @@ applicationCtrl.UpdateMembershipStatus = async (req, res) => {
 }
 
 
-export { applicationCtrl}
+export { applicationCtrl }
