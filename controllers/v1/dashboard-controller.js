@@ -4,6 +4,8 @@ import { Member } from '../../models/MemberModel.js'
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc.js';
 import timezone from 'dayjs/plugin/timezone.js';
+import { Application } from '../../models/ApplicationModel.js';
+import { HallEnquiry } from '../../models/hall-enquiries-model.js';
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -58,10 +60,10 @@ dashCtrl.memberChart = async (req, res) => {
         const memberCountCurrentMonth = data[data?.length - 1];
         console.log(data[data?.length - 1])
 
-        const increment = memberCountCurrentMonth/totalMembers * 100;
+        const increment = memberCountCurrentMonth / totalMembers * 100;
 
         const result = {
-            labels, data, total:totalMembers, increment
+            labels, data, total: totalMembers, increment
         }
         console.log(result)
 
@@ -86,7 +88,29 @@ dashCtrl.analytics = async (req, res) => {
 
 dashCtrl.recentUpdates = async (req, res) => {
     try {
+        const startOfDay = dayjs().startOf('day').toISOString();
+        const endOfDay = dayjs().endOf('day').toISOString();
 
+        const applicationCount = await Application.countDocuments({
+            status:'pending',
+            createdAt: {
+                $gte: startOfDay, 
+                $lt: endOfDay    
+            }
+        })
+
+        const enquiryCount = await HallEnquiry.countDocuments({
+            createdAt: {
+                $gte: startOfDay, 
+                $lt: endOfDay    
+            }
+        })
+
+        const result = {
+            applicationCount, enquiryCount
+        }
+
+        res.status(200).json({result})
 
     } catch (error) {
         console.log(error)
