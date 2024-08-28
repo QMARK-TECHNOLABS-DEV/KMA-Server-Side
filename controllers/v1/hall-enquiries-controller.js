@@ -58,6 +58,8 @@ hallEnquiriesController.getAllHallEnquiries = async (req, res) => {
         const filters = {}
 
         const { date } = req.query
+        const searchQuery = req.query.search;
+        if (searchQuery) { filters.name = { $regex: new RegExp(searchQuery, "i") } }
 
         if (date) {
             const parsedDate = dayjs(date, 'DD-MM-YYYY');

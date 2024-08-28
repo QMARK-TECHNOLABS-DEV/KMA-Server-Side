@@ -56,7 +56,7 @@ applicationCtrl.GetAllApplications = async (req, res) => {
 
         }
 
-        if (searchQuery) { filters.title = { $regex: new RegExp(searchQuery, "i") } }
+        if (searchQuery) { filters.applicantName = { $regex: new RegExp(searchQuery, "i") } }
         if (status) { filters.status = status }
 
         const applications = await Application.find(filters).sort({ createdAt: -1 })

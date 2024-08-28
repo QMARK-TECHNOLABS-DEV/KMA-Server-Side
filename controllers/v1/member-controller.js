@@ -55,7 +55,7 @@ memberCtrl.GetAllMembers = async (req, res) => {
 
         }
 
-        if (searchQuery) { filters.title = { $regex: new RegExp(searchQuery, "i") } }
+        if (searchQuery) { filters.applicantName = { $regex: new RegExp(searchQuery, "i") } }
 
         const members = await Member.find(filters).sort({ createdAt: -1 })
 
