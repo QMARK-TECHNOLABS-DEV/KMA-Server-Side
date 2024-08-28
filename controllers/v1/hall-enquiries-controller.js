@@ -8,10 +8,11 @@ const { ObjectId } = mongoose.Types;
 const hallEnquiriesController = {};
 
 // * Function to save hall enquiry to MongoDB
-hallEnquiriesController.saveHallEnquiryToDB = async (name, email, phoneNo) => {
+hallEnquiriesController.saveHallEnquiryToDB = async (hall, name, email, phoneNo) => {
     const collection = mongoose.connection.collection(process.env.HALL_ENQUIRIES_COLLECTION_NAME);
 
     const metadata = new HallEnquiry({
+        hall:hall,
         name: name,
         email: email,
         phoneNo: phoneNo
@@ -23,6 +24,7 @@ hallEnquiriesController.saveHallEnquiryToDB = async (name, email, phoneNo) => {
 // * Function to add hall enquiry
 hallEnquiriesController.createHallEnquiry = async (req, res) => {
     try {
+        const hall = req.body.hall;
         const name = req.body.name;
         const email = req.body.email;
         const phoneNo = req.body.phoneNo;
@@ -31,7 +33,7 @@ hallEnquiriesController.createHallEnquiry = async (req, res) => {
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         if (!emailRegex.test(email)) return res.status(400).json({ msg: "Invalid Email format" });    
 
-        await hallEnquiriesController.saveHallEnquiryToDB(name, email, phoneNo);
+        await hallEnquiriesController.saveHallEnquiryToDB(hall, name, email, phoneNo);
 
         return res.status(201).json({ message: 'Hall enquiry added successfully' });
     } catch (error) {

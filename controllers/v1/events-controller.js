@@ -152,5 +152,44 @@ eventsController.updateEventById = async (req, res) => {
         return res.status(500).json({ message: 'Internal server error' });
     }
 }
+
+
+eventsController.archiveMultiple = async(req,res)=>{
+    try {
+        const {archiveList} = req.body;
+
+        if(archiveList?.some(item=> !isValidObjectId(item))){ return res.status(400).json({ message: 'Invalid id' }) }
+
+        const response = await Event.updateMany({_id:{$in: archiveList}}, {$set: {isArchived: true}})
+
+        console.log({response})
+
+        res.status(200).json({ message: 'Events archived' });
+        
+    } catch (error) {
+        console.log(error);
+        return res.status(500).json({ message: 'Internal server error' });
+    }
+}
+
+
+eventsController.deleteMultiple = async(req,res)=>{
+    try {
+        const {deleteList} = req.body;
+
+        if(deleteList?.some(item=> !isValidObjectId(item))){ return res.status(400).json({ message: 'Invalid id' }) }
+
+        const response = await Event.deleteMany({_id:{$in: deleteList}})
+
+        console.log({response})
+
+        res.status(200).json({ message: 'Events archived' });
+        
+    } catch (error) {
+        console.log(error);
+        return res.status(500).json({ message: 'Internal server error' });
+    }
+}
+
 // ? Export the eventsController
 export { eventsController };

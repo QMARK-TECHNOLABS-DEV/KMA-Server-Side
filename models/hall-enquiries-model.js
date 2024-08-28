@@ -2,6 +2,10 @@ import mongoose from "mongoose";
 
 // * Define the schema for the hall-enquiries collection
 const hallEnquirySchema = new mongoose.Schema({
+    hall: {
+        type: String,
+        required: true
+    },
     name: {
         type: String,
         required: true

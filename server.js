@@ -19,7 +19,7 @@ admin.initializeApp(
 const app = express();
 
 // * Morgan is used for logging the requests
-// app.use(morgan('combined'));
+app.use(morgan('combined'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
@@ -58,7 +58,7 @@ app.use(function (req, res, next) {
 app.use('/api/v1', v1Router);
 
 // * Define the port for the server
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 8080;
 
 // * Start the server
 app.listen(PORT, () => {

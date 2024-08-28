@@ -106,14 +106,19 @@ socialConnectController.deletePlatform = async (req, res) => {
 // * Function to add a social connect link
 socialConnectController.addSocialConnect = async (req, res) => {
     try {
+        console.log(req.body)
         const title = req.body.title;
         const platform = req.body.platform;
         const coverImage = req.file;
         const link = req.body.link;
 
-        const collection = mongoose.connection.collection(process.env.PLATFORM_COLLECTION_NAME);
+        // const collection = mongoose.connection.collection(process.env.PLATFORM_COLLECTION_NAME);
 
-        const platformData = await collection.findOne({ name : platform });
+        // const platformData = await collection.findOne({ _id : platform });
+
+        const platformData = await Platform.findOne({ _id : platform });
+
+        console.log({platformData})
 
         if (!platformData) {
             return res.status(404).json({ message: 'Platform not found' });
@@ -136,7 +141,9 @@ socialConnectController.getAllSocialConnects = async (req, res) => {
     try {
         const collection = mongoose.connection.collection(process.env.SOCIAL_CONNECT_COLLECTION_NAME);
 
-        const socialConnects = await collection.find().sort({ createdAt: -1 }).toArray();
+        const socialConnects = await SocialConnects.find()
+        .populate('platform', '_id name')
+        .sort({ createdAt: -1 });
 
         return res.status(200).json({ socialConnects : socialConnects });
     } catch (error) {
