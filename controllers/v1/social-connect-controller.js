@@ -141,9 +141,10 @@ socialConnectController.getAllSocialConnects = async (req, res) => {
     try {
         const collection = mongoose.connection.collection(process.env.SOCIAL_CONNECT_COLLECTION_NAME);
 
-        const socialConnects = await SocialConnects.find()
-        .populate('platform', '_id name')
-        .sort({ createdAt: -1 });
+        // const socialConnects = await SocialConnects.find()
+        // .populate('platform', '_id name')
+        // .sort({ createdAt: -1 });
+        const socialConnects = await collection.find().sort({ createdAt: -1 }).toArray();
 
         return res.status(200).json({ socialConnects : socialConnects });
     } catch (error) {

@@ -1,7 +1,7 @@
 import mongoose from "mongoose";
 
 const ApplicationSchema = new mongoose.Schema({
-    username: { type: String, required: true, unique: true },
+    username: { type: String, required: true },
     password: { type: String, required: true },
     applicantName: { type: String },
     address: { type: String },

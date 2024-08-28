@@ -1,6 +1,7 @@
 import { isValidObjectId } from "mongoose";
 import { Application } from "../../models/ApplicationModel.js";
 import { Member } from "../../models/MemberModel.js";
+import { application } from "express";
 
 const applicationCtrl = {};
 
@@ -91,5 +92,56 @@ applicationCtrl.UpdateMembershipStatus = async (req, res) => {
     }
 }
 
-
+applicationCtrl.createApplication = async (req, res) => {
+    try {
+      const formData = req.body;  // the form data from the frontend
+  
+      // Check if required fields are present
+      if (!formData.username || !formData.password) {
+        return res.status(400).json({
+          msg: 'Username and password are required.'
+        });
+      }
+  
+      // Create new application entry
+      const newApplication = new Application({
+        username: formData.username,
+        password: formData.password,
+        applicantName: formData.name,
+        address: formData.address,
+        state: formData.state,
+        country: formData.country,
+        phone: formData.telephone,
+        email: formData.email,
+        contactPerson: formData.contactPerson,
+        membershipType: formData.membershipType,
+        business: {
+          nature: formData.businessNature,
+          name: formData.businessName,
+          address: formData.businessAddress,
+          regNum: formData.regNum,
+          regDate: formData.regDate,
+          commenceDate: formData.commenceDate,
+          authRep: formData.authRep,
+          altAuthRep: formData.altAuthRep,
+          meetAuthRep: formData.meetAuthRep
+        },
+        idProof: formData.idProof,
+        hasRenewalPay: formData.hasRenewalPay,
+        payMode: formData.payMode
+      });
+  
+      // Save application to database
+      await newApplication.save();
+  
+      res.status(201).json({
+        msg: 'Registered Successfully',
+        application: newApplication
+      });
+  
+    } catch (error) {
+      console.log("Error creating application:", error);
+      res.status(500).json({ msg: 'Something went wrong' });
+    }
+  };
 export { applicationCtrl }
