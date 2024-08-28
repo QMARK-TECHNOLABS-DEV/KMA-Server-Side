@@ -8,6 +8,15 @@ const { ObjectId } = mongoose.Types;
 
 const socialConnectController = {};
 
+import dayjs from 'dayjs';
+import utc from 'dayjs/plugin/utc.js';
+import timezone from 'dayjs/plugin/timezone.js';
+dayjs.extend(utc);
+dayjs.extend(timezone);
+
+// Set the default timezone to IST
+dayjs.tz.setDefault('Asia/Kolkata');
+
 // * Function to save social connect to MongoDB
 socialConnectController.saveSocialConnectToDB = async (title, platformId, coverImageUrl, coverImagefileName, link) => {
     const collection = mongoose.connection.collection(process.env.SOCIAL_CONNECT_COLLECTION_NAME);
@@ -139,9 +148,26 @@ socialConnectController.addSocialConnect = async (req, res) => {
 // * Function to get all social connects
 socialConnectController.getAllSocialConnects = async (req, res) => {
     try {
-        const collection = mongoose.connection.collection(process.env.SOCIAL_CONNECT_COLLECTION_NAME);
+        const filters = {}
 
-        const socialConnects = await SocialConnects.find()
+        const { date } = req.query
+
+        if (date) {
+            const parsedDate = dayjs(date, 'DD-MM-YYYY');
+
+            const startOfDay = parsedDate.startOf('day').toISOString();
+            const endOfDay = parsedDate.endOf('day').toISOString();
+
+            filters.createdAt = {
+                $gte: startOfDay,
+                $lt: endOfDay
+            }
+
+        }
+
+        // const collection = mongoose.connection.collection(process.env.SOCIAL_CONNECT_COLLECTION_NAME);
+
+        const socialConnects = await SocialConnects.find(filters)
         .populate('platform', '_id name')
         .sort({ createdAt: -1 });
 

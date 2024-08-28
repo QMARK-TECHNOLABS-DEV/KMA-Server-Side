@@ -7,6 +7,15 @@ const { ObjectId } = mongoose.Types;
 
 const hallEnquiriesController = {};
 
+import dayjs from 'dayjs';
+import utc from 'dayjs/plugin/utc.js';
+import timezone from 'dayjs/plugin/timezone.js';
+dayjs.extend(utc);
+dayjs.extend(timezone);
+
+// Set the default timezone to IST
+dayjs.tz.setDefault('Asia/Kolkata');
+
 // * Function to save hall enquiry to MongoDB
 hallEnquiriesController.saveHallEnquiryToDB = async (hall, name, email, phoneNo) => {
     const collection = mongoose.connection.collection(process.env.HALL_ENQUIRIES_COLLECTION_NAME);
@@ -45,9 +54,28 @@ hallEnquiriesController.createHallEnquiry = async (req, res) => {
 // * Function to get all hall enquiries
 hallEnquiriesController.getAllHallEnquiries = async (req, res) => {
     try {
-        const collection = mongoose.connection.collection(process.env.HALL_ENQUIRIES_COLLECTION_NAME);
 
-        const hallEnquiries = await collection.find().sort({ createdAt: -1 }).toArray();
+        const filters = {}
+
+        const { date } = req.query
+        const searchQuery = req.query.search;
+        if (searchQuery) { filters.name = { $regex: new RegExp(searchQuery, "i") } }
+
+        if (date) {
+            const parsedDate = dayjs(date, 'DD-MM-YYYY');
+
+            const startOfDay = parsedDate.startOf('day').toISOString();
+            const endOfDay = parsedDate.endOf('day').toISOString();
+
+            filters.createdAt = {
+                $gte: startOfDay,
+                $lt: endOfDay
+            }
+
+        }
+        // const collection = mongoose.connection.collection(process.env.HALL_ENQUIRIES_COLLECTION_NAME);
+
+        const hallEnquiries = await HallEnquiry.find(filters).sort({ createdAt: -1 });
 
         return res.status(200).json({ hallEnquiries : hallEnquiries });
     } catch (error) {

@@ -8,6 +8,15 @@ const { ObjectId } = mongoose.Types;
 
 const articlesController = {};
 
+import dayjs from 'dayjs';
+import utc from 'dayjs/plugin/utc.js';
+import timezone from 'dayjs/plugin/timezone.js';
+dayjs.extend(utc);
+dayjs.extend(timezone);
+
+// Set the default timezone to IST
+dayjs.tz.setDefault('Asia/Kolkata');
+
 // * Function to save articles to MongoDB
 articlesController.saveArticleToDB = async (title,coverImageUrl, coverImagefileName, content) => {
     const collection = mongoose.connection.collection(process.env.ARTICLES_COLLECTION_NAME);
@@ -44,9 +53,25 @@ articlesController.createArticle = async (req, res) => {
 // * Function to get all articles
 articlesController.getAllArticles = async (req, res) => {
     try {
-        const collection = mongoose.connection.collection(process.env.ARTICLES_COLLECTION_NAME);
+        const filters = {}
 
-        const articles = await collection.find().sort({ createdAt: -1 }).toArray();
+        const { date } = req.query
+
+        if (date) {
+            const parsedDate = dayjs(date, 'DD-MM-YYYY');
+
+            const startOfDay = parsedDate.startOf('day').toISOString();
+            const endOfDay = parsedDate.endOf('day').toISOString();
+
+            filters.createdAt = {
+                $gte: startOfDay,
+                $lt: endOfDay
+            }
+
+        }
+        // const collection = mongoose.connection.collection(process.env.ARTICLES_COLLECTION_NAME);
+
+        const articles = await Articles.find(filters).sort({ createdAt: -1 });
 
         return res.status(200).json({ articles : articles });
     } catch (error) {

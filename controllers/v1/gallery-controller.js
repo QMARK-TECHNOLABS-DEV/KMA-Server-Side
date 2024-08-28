@@ -8,6 +8,15 @@ const { ObjectId } = mongoose.Types;
 
 const galleryController = {};
 
+import dayjs from 'dayjs';
+import utc from 'dayjs/plugin/utc.js';
+import timezone from 'dayjs/plugin/timezone.js';
+dayjs.extend(utc);
+dayjs.extend(timezone);
+
+// Set the default timezone to IST
+dayjs.tz.setDefault('Asia/Kolkata');
+
 // * Function to save gallery to MongoDB
 galleryController.saveGalleryToDB = async (name, fileUrl, fileName) => {
     const collection = mongoose.connection.collection(process.env.GALLERY_COLLECTION_NAME);
@@ -42,9 +51,28 @@ galleryController.createGallery = async (req, res) => {
 // * Function to get all files in gallery
 galleryController.getAllGallery = async (req, res) => {
     try {
-        const collection = mongoose.connection.collection(process.env.GALLERY_COLLECTION_NAME);
+        const filters = {}
 
-        const gallery = await collection.find().sort({ createdAt: -1 }).toArray();
+        const { date } = req.query
+
+        if (date) {
+            const parsedDate = dayjs(date, 'DD-MM-YYYY');
+
+            const startOfDay = parsedDate.startOf('day').toISOString();
+            const endOfDay = parsedDate.endOf('day').toISOString();
+
+            console.log({startOfDay, endOfDay})
+
+            filters.createdAt = {
+                $gte: startOfDay,
+                $lt: endOfDay
+            }
+
+        }
+        
+        // const collection = mongoose.connection.collection(process.env.GALLERY_COLLECTION_NAME);
+
+        const gallery = await Gallery.find(filters).sort({ createdAt: -1 });
 
         return res.status(200).json({ gallery : gallery });
     } catch (error) {

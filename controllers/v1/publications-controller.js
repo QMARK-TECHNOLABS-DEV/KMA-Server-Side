@@ -8,6 +8,15 @@ const { ObjectId } = mongoose.Types;
 
 const publicationsController = {};
 
+import dayjs from 'dayjs';
+import utc from 'dayjs/plugin/utc.js';
+import timezone from 'dayjs/plugin/timezone.js';
+dayjs.extend(utc);
+dayjs.extend(timezone);
+
+// Set the default timezone to IST
+dayjs.tz.setDefault('Asia/Kolkata');
+
 // * Function to save publications to MongoDB
 publicationsController.savePublicationToDB = async (title, fileUrl, fileName, coverImageUrl, coverImagefileName) => {
     const collection = mongoose.connection.collection(process.env.PUBLICATIONS_COLLECTION_NAME);
@@ -47,9 +56,25 @@ publicationsController.uploadPublication = async (req, res) => {
 // * Function to get all publications
 publicationsController.getAllPublications = async (req, res) => {
     try {
+        const filters = {}
+
+        const { date } = req.query
+
+        if (date) {
+            const parsedDate = dayjs(date, 'DD-MM-YYYY');
+
+            const startOfDay = parsedDate.startOf('day').toISOString();
+            const endOfDay = parsedDate.endOf('day').toISOString();
+
+            filters.createdAt = {
+                $gte: startOfDay,
+                $lt: endOfDay
+            }
+
+        }
         const collection = mongoose.connection.collection(process.env.PUBLICATIONS_COLLECTION_NAME);
 
-        const publications = await collection.find().sort({ createdAt: -1 }).toArray();
+        const publications = await Publications.find(filters).sort({ createdAt: -1 });
 
         return res.status(200).json({ publications : publications });
     } catch (error) {
