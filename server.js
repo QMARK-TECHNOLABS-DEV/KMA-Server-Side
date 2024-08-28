@@ -19,7 +19,7 @@ admin.initializeApp(
 const app = express();
 
 // * Morgan is used for logging the requests
-// app.use(morgan('combined'));
+app.use(morgan('combined'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 

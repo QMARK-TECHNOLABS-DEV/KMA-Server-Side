@@ -13,16 +13,21 @@ const eventsRouter = express.Router();
 // * Defining the routes for events
 
 // * Routes for client side (unprotected routes)
-eventsRouter.get('', eventsController.getAllEvents);
 eventsRouter.get('/:eventId', eventsController.getEventById);
+eventsRouter.get('', eventsController.getAllEvents);
 
 // * Middleware to check the authentication
 eventsRouter.use(authMiddleware);
 
 // * Routes for Admin Dashboard (protected routes)
+eventsRouter.put('/multi',  eventsController.archiveMultiple);
+eventsRouter.delete('/multi',  eventsController.deleteMultiple);
+
 eventsRouter.post('', upload.single('speakerCover'), eventsController.createEvent);
 eventsRouter.delete('/:eventId', eventsController.deleteEventById);
 eventsRouter.put('/:eventId', upload.single('speakerCover'), eventsController.updateEventById);
+
+
 
 // ? Export the eventsRouter
 export { eventsRouter };
