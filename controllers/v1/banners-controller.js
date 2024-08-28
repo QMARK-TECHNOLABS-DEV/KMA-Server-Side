@@ -8,6 +8,15 @@ const { ObjectId } = mongoose.Types;
 
 const bannerController = {};
 
+import dayjs from 'dayjs';
+import utc from 'dayjs/plugin/utc.js';
+import timezone from 'dayjs/plugin/timezone.js';
+dayjs.extend(utc);
+dayjs.extend(timezone);
+
+// Set the default timezone to IST
+dayjs.tz.setDefault('Asia/Kolkata');
+
 // * Function to save banners to MongoDB
 bannerController.saveGalleryToDB = async (name, fileUrl, fileName) => {
     const collection = mongoose.connection.collection(process.env.BANNERS_COLLECTION_NAME);
@@ -42,9 +51,26 @@ bannerController.uploadBanner = async (req, res) => {
 // * Function to get all files in banners collection
 bannerController.getAllBanners = async (req, res) => {
     try {
-        const collection = mongoose.connection.collection(process.env.BANNERS_COLLECTION_NAME);
+        const filters = {}
 
-        const banners = await collection.find().sort({ createdAt: -1 }).toArray();
+        const { date } = req.query
+
+        if (date) {
+            const parsedDate = dayjs(date, 'DD-MM-YYYY');
+
+            const startOfDay = parsedDate.startOf('day').toISOString();
+            const endOfDay = parsedDate.endOf('day').toISOString();
+
+            filters.createdAt = {
+                $gte: startOfDay,
+                $lt: endOfDay
+            }
+
+        }
+
+        // const collection = mongoose.connection.collection(process.env.BANNERS_COLLECTION_NAME);
+
+        const banners = await Banners.find(filters).sort({ createdAt: -1 });
 
         return res.status(200).json({ banners : banners });
     } catch (error) {

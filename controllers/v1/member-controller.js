@@ -4,6 +4,15 @@ import { commonController } from "./common-controller.js";
 
 const memberCtrl = {};
 
+import dayjs from 'dayjs';
+import utc from 'dayjs/plugin/utc.js';
+import timezone from 'dayjs/plugin/timezone.js';
+dayjs.extend(utc);
+dayjs.extend(timezone);
+
+// Set the default timezone to IST
+dayjs.tz.setDefault('Asia/Kolkata');
+
 // Member CRUD
 
 memberCtrl.GetMember = async (req, res) => {
@@ -30,6 +39,21 @@ memberCtrl.GetAllMembers = async (req, res) => {
         const entries = req.query.entries;
 
         const filters = {}
+
+        const { date } = req.query
+
+        if (date) {
+            const parsedDate = dayjs(date, 'DD-MM-YYYY');
+
+            const startOfDay = parsedDate.startOf('day').toISOString();
+            const endOfDay = parsedDate.endOf('day').toISOString();
+
+            filters.createdAt = {
+                $gte: startOfDay,
+                $lt: endOfDay
+            }
+
+        }
 
         if (searchQuery) { filters.title = { $regex: new RegExp(searchQuery, "i") } }
 

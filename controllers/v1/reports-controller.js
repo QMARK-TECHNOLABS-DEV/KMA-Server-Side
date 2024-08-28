@@ -8,6 +8,15 @@ const { ObjectId } = mongoose.Types;
 
 const reportsController = {};
 
+import dayjs from 'dayjs';
+import utc from 'dayjs/plugin/utc.js';
+import timezone from 'dayjs/plugin/timezone.js';
+dayjs.extend(utc);
+dayjs.extend(timezone);
+
+// Set the default timezone to IST
+dayjs.tz.setDefault('Asia/Kolkata');
+
 // * Function to save reports to MongoDB
 reportsController.saveReportToDB = async (title, fileUrl, fileName, coverImageUrl, coverImagefileName) => {
     const collection = mongoose.connection.collection(process.env.REPORTS_COLLECTION_NAME);
@@ -49,9 +58,25 @@ reportsController.createReport = async (req, res) => {
 // * Function to get all reports
 reportsController.getAllReports = async (req, res) => {
     try {
+        const filters = {}
+
+        const { date } = req.query
+
+        if (date) {
+            const parsedDate = dayjs(date, 'DD-MM-YYYY');
+
+            const startOfDay = parsedDate.startOf('day').toISOString();
+            const endOfDay = parsedDate.endOf('day').toISOString();
+
+            filters.createdAt = {
+                $gte: startOfDay,
+                $lt: endOfDay
+            }
+
+        }
         const collection = mongoose.connection.collection(process.env.REPORTS_COLLECTION_NAME);
 
-        const reports = await collection.find().sort({ createdAt: -1 }).toArray();
+        const reports = await Reports.find(filters).sort({ createdAt: -1 });
 
         return res.status(200).json({ reports : reports });
     } catch (error) {
