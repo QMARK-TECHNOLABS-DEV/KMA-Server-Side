@@ -25,6 +25,7 @@ app.use(express.urlencoded({ extended: false }));
 
 const ClientURL = process.env.ClientURL;
 const ClientURL2 = process.env.ClientURL2;
+const ClientURL3 = process.env.ClientURL3;
 
 // * Define the URLs for CORS
 const corsOptions = {
@@ -34,7 +35,7 @@ const corsOptions = {
       callback(null, true);
 
     } else {
-      const allowedOrigins = [ClientURL, ClientURL2];
+      const allowedOrigins = [ClientURL, ClientURL2, ClientURL3];
 
       if (allowedOrigins.indexOf(origin) !== -1) {
         callback(null, true);
