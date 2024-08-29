@@ -3,7 +3,7 @@ import jwt from 'jsonwebtoken';
 const authMiddleware = async (req, res, next) => {
 
     const authHeader = req?.headers?.authorization || req?.headers?.Authorization;
-    // console.log("authHeader", authHeader)
+    console.log("authHeader alo", authHeader)
     if (!authHeader?.startsWith('Bearer ')) return res.sendStatus(401);
     const acccessToken = authHeader.split(' ')[1];
     // console.log("acccessToken", acccessToken);

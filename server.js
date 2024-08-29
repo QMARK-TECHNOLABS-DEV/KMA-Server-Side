@@ -3,7 +3,7 @@ import morgan from 'morgan';
 import { v1Router } from './routes/v1-routes.js';
 import connectDB from './db.js';
 import cors from 'cors';
-import admin  from 'firebase-admin';
+import admin from 'firebase-admin';
 import serviceAccount from './kma-server-firebase-adminsdk-v06dv-429cab45a0.json' assert { type: 'json' };
 
 
@@ -28,23 +28,23 @@ const ClientURL2 = process.env.ClientURL2;
 
 // * Define the URLs for CORS
 const corsOptions = {
-    credentials: true,
-    origin: function (origin, callback) {
-      if (!origin || process.env.NODE_ENV === 'development') {
+  credentials: true,
+  origin: function (origin, callback) {
+    if (!origin || process.env.NODE_ENV === 'development') {
+      callback(null, true);
+
+    } else {
+      const allowedOrigins = [ClientURL, ClientURL2];
+
+      if (allowedOrigins.indexOf(origin) !== -1) {
         callback(null, true);
-  
       } else {
-        const allowedOrigins = [ClientURL, ClientURL2];
-  
-        if (allowedOrigins.indexOf(origin) !== -1) {
-          callback(null, true);
-        } else {
-          callback(new Error('Origin not allowed by CORS'));
-        }
+        callback(new Error('Origin not allowed by CORS'));
       }
     }
+  }
 };
-  
+
 app.use(cors(corsOptions));
 
 // * Middleware to set the Cache-Control header
