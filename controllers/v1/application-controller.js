@@ -4,6 +4,15 @@ import { Member } from "../../models/MemberModel.js";
 
 const applicationCtrl = {};
 
+import dayjs from 'dayjs';
+import utc from 'dayjs/plugin/utc.js';
+import timezone from 'dayjs/plugin/timezone.js';
+dayjs.extend(utc);
+dayjs.extend(timezone);
+
+// Set the default timezone to IST
+dayjs.tz.setDefault('Asia/Kolkata');
+
 // Application CRUD 
 
 applicationCtrl.GetApplication = async (req, res) => {
@@ -32,7 +41,22 @@ applicationCtrl.GetAllApplications = async (req, res) => {
 
         const filters = {}
 
-        if (searchQuery) { filters.title = { $regex: new RegExp(searchQuery, "i") } }
+        const { date } = req.query
+
+        if (date) {
+            const parsedDate = dayjs(date, 'DD-MM-YYYY');
+
+            const startOfDay = parsedDate.startOf('day').toISOString();
+            const endOfDay = parsedDate.endOf('day').toISOString();
+
+            filters.createdAt = {
+                $gte: startOfDay,
+                $lt: endOfDay
+            }
+
+        }
+
+        if (searchQuery) { filters.applicantName = { $regex: new RegExp(searchQuery, "i") } }
         if (status) { filters.status = status }
 
         const applications = await Application.find(filters).sort({ createdAt: -1 })

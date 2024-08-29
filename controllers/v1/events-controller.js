@@ -50,11 +50,20 @@ eventsController.createEvent = async (req, res) => {
 // * Function to get all events
 eventsController.getAllEvents = async (req, res) => {
     try {
+        const { date } = req.query;
+        console.log(date)
+
+        const filter = {}
+
+        if (date) {
+            filter.date = date
+        }
+
         const collection = mongoose.connection.collection(process.env.EVENTS_COLLECTION_NAME);
 
-        const events = await collection.find().sort({ createdAt: -1 }).toArray();
+        const events = await collection.find(filter).sort({ createdAt: -1 }).toArray();
 
-        return res.status(200).json({ events : events });
+        return res.status(200).json({ events: events });
     } catch (error) {
         console.log(error);
         return res.status(500).json({ message: 'Internal server error' });
@@ -66,16 +75,16 @@ eventsController.getEventById = async (req, res) => {
     try {
         const eventId = req.params.eventId;
 
-        if(!isValidObjectId(eventId))
+        if (!isValidObjectId(eventId))
             return res.status(400).json({ message: 'Invalid event ID format' });
 
         const collection = mongoose.connection.collection(process.env.EVENTS_COLLECTION_NAME);
 
-        const event = await collection.findOne({ _id : new ObjectId(eventId) });
+        const event = await collection.findOne({ _id: new ObjectId(eventId) });
 
         if (!event)
             return res.status(404).json({ message: 'Event not found' });
-        
+
         return res.status(200).json(event);
 
     } catch (error) {
@@ -89,19 +98,19 @@ eventsController.deleteEventById = async (req, res) => {
     try {
         const eventId = req.params.eventId;
 
-        if(!isValidObjectId(eventId))
+        if (!isValidObjectId(eventId))
             return res.status(400).json({ message: 'Invalid event ID format' });
 
         const collection = mongoose.connection.collection(process.env.EVENTS_COLLECTION_NAME);
 
-        const event = await collection.findOne({ _id : new ObjectId(eventId) });
+        const event = await collection.findOne({ _id: new ObjectId(eventId) });
 
         if (!event)
             return res.status(404).json({ message: 'Event not found' });
 
         await commonController.deleteFileFromFirebase(`${event.speakerCoverFileName}`);
 
-        await collection.deleteOne({ _id : new ObjectId(eventId) });
+        await collection.deleteOne({ _id: new ObjectId(eventId) });
 
         return res.status(200).json({ message: 'Event deleted successfully' });
 
@@ -116,12 +125,12 @@ eventsController.updateEventById = async (req, res) => {
     try {
         const eventId = req.params.eventId;
 
-        if(!isValidObjectId(eventId))
+        if (!isValidObjectId(eventId))
             return res.status(400).json({ message: 'Invalid event ID format' });
 
         const collection = mongoose.connection.collection(process.env.EVENTS_COLLECTION_NAME);
 
-        const event = await collection.findOne({ _id : new ObjectId(eventId) });
+        const event = await collection.findOne({ _id: new ObjectId(eventId) });
 
         if (!event)
             return res.status(404).json({ message: 'Event not found' });
@@ -136,14 +145,14 @@ eventsController.updateEventById = async (req, res) => {
         let speakerCoverUrl = event.speakerCoverUrl;
         let speakerCoverName = event.speakerCoverFileName;
 
-        if(speakerCover) {
+        if (speakerCover) {
             await commonController.deleteFileFromFirebase(`${event.speakerCoverFileName}`);
             const { publicUrl, fileName } = await commonController.uploadFileToFirebase(speakerCover, process.env.EVENTS_SPEAKER_COVER_FOLDER_PATH);
             speakerCoverUrl = publicUrl;
             speakerCoverName = fileName;
         }
 
-        await collection.updateOne({ _id : new ObjectId(eventId) }, { $set: { title: title, date: date, description: description, location: location, speakerName: speakerName, speakerCoverUrl: speakerCoverUrl, speakerCoverFileName: speakerCoverName } });
+        await collection.updateOne({ _id: new ObjectId(eventId) }, { $set: { title: title, date: date, description: description, location: location, speakerName: speakerName, speakerCoverUrl: speakerCoverUrl, speakerCoverFileName: speakerCoverName } });
 
         return res.status(200).json({ message: 'Event updated successfully' });
 
@@ -154,18 +163,18 @@ eventsController.updateEventById = async (req, res) => {
 }
 
 
-eventsController.archiveMultiple = async(req,res)=>{
+eventsController.archiveMultiple = async (req, res) => {
     try {
-        const {archiveList} = req.body;
+        const { archiveList } = req.body;
 
-        if(archiveList?.some(item=> !isValidObjectId(item))){ return res.status(400).json({ message: 'Invalid id' }) }
+        if (archiveList?.some(item => !isValidObjectId(item))) { return res.status(400).json({ message: 'Invalid id' }) }
 
-        const response = await Event.updateMany({_id:{$in: archiveList}}, {$set: {isArchived: true}})
+        const response = await Event.updateMany({ _id: { $in: archiveList } }, { $set: { isArchived: true } })
 
-        console.log({response})
+        console.log({ response })
 
         res.status(200).json({ message: 'Events archived' });
-        
+
     } catch (error) {
         console.log(error);
         return res.status(500).json({ message: 'Internal server error' });
@@ -173,18 +182,18 @@ eventsController.archiveMultiple = async(req,res)=>{
 }
 
 
-eventsController.deleteMultiple = async(req,res)=>{
+eventsController.deleteMultiple = async (req, res) => {
     try {
-        const {deleteList} = req.body;
+        const { deleteList } = req.body;
 
-        if(deleteList?.some(item=> !isValidObjectId(item))){ return res.status(400).json({ message: 'Invalid id' }) }
+        if (deleteList?.some(item => !isValidObjectId(item))) { return res.status(400).json({ message: 'Invalid id' }) }
 
-        const response = await Event.deleteMany({_id:{$in: deleteList}})
+        const response = await Event.deleteMany({ _id: { $in: deleteList } })
 
-        console.log({response})
+        console.log({ response })
 
         res.status(200).json({ message: 'Events archived' });
-        
+
     } catch (error) {
         console.log(error);
         return res.status(500).json({ message: 'Internal server error' });
