@@ -5,10 +5,12 @@ const authRouter = express.Router();
 
 // * Define the routes for authentication
 authRouter.post("/admin/login", authController.adminLogin)
-authRouter.get("/logout", authController.adminLogout)
 authRouter.post("/admin/signup", authController.adminSignup)
+authRouter.get("/admin/logout", authController.adminLogout)
 
 // * Token refresh route (Add refresh token in the request body)
 authRouter.post("/regenerate", authController.regenerateAccessToken)
+
+authRouter.post("/login", authController.MemberLogin)
 
 export { authRouter };
