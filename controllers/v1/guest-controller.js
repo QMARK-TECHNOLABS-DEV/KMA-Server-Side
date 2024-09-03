@@ -28,8 +28,6 @@ guestCtrl.CreateApplication = async (req, res, next) => {
         const createObj = req.body;
 
         if (req.file) {
-            // createObj.idProof = { name: req.file?.originalname, key: req.file?.key, 
-            //     location: req.file?.location, size: req.file?.size }
 
             const { publicUrl, fileName } = await commonController.uploadFileToFirebase( req.file, process.env.MEMBER_FOLDER_PATH );
 
