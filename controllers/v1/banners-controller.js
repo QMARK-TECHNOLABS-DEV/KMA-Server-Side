@@ -36,6 +36,12 @@ bannerController.uploadBanner = async (req, res) => {
         const name = req.body.name;
         const file = req.file;
 
+        if (!(name?.trim() && file)) { return res.status(400).json({ msg: "Insufficient data" }) }
+
+        const existingName = await Banners.findOne({ name })
+
+        if (existingName) { return res.status(409).json({ msg: "Name already exists" }) }
+
         const { publicUrl: fileUrl, fileName } = await commonController.uploadFileToFirebase(file, process.env.BANNERS_FOLDER_PATH);
 
         console.log(fileUrl, fileName);
@@ -72,7 +78,7 @@ bannerController.getAllBanners = async (req, res) => {
 
         const banners = await Banners.find(filters).sort({ createdAt: -1 });
 
-        return res.status(200).json({ banners : banners });
+        return res.status(200).json({ banners: banners });
     } catch (error) {
         console.log(error);
         return res.status(500).json({ message: 'Internal server error' });
@@ -142,23 +148,36 @@ bannerController.updateBannerById = async (req, res) => {
             return res.status(400).json({ message: 'Invalid id' });
         }
 
-        const collection = mongoose.connection.collection(process.env.BANNERS_COLLECTION_NAME);
+        const createObj = {}
+        if (name) {
+            const existingName = await Banners.findOne({ name })
 
-        const banners = await collection.findOne({ _id: new ObjectId(id) });
+            if (existingName) {
+                return res.status(409).json({ msg: "Name already exists" })
+            }
+            else {
+                createObj.name = name
+            }
+        }
 
-        if (!banners) {
-            return res.status(404).json({ message: 'Gallery not found' });
+        const banner = await Banners.findById(id);
+
+        if (!banner) {
+            return res.status(404).json({ message: 'Banner not found' });
         }
 
         if (file) {
-            await commonController.deleteFileFromFirebase(`${banners.fileName}`);
+            await commonController.deleteFileFromFirebase(`${banner.fileName}`);
 
             const { publicUrl: fileUrl, fileName } = await commonController.uploadFileToFirebase(file, process.env.BANNERS_FOLDER_PATH);
 
-            await collection.updateOne({ _id: new ObjectId(id) }, { $set: { name: name, fileUrl: fileUrl, fileName: fileName } });
-        } else {
-            await collection.updateOne({ _id: new ObjectId(id) }, { $set: { name: name } });
+            createObj.fileUrl = fileUrl;
+            createObj.fileName = fileName;
         }
+
+        const updatedBanner = await Banners.findByIdAndUpdate(id, { $set: createObj }, { new: true });
+
+        if (!updatedBanner) { return res.status(404).json({ msg: "Not found" }) }
 
         return res.status(200).json({ message: 'Banner updated successfully' });
     } catch (error) {
