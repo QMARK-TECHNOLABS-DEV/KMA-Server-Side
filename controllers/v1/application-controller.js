@@ -99,6 +99,10 @@ applicationCtrl.UpdateMembershipStatus = async (req, res) => {
 
             memberObj.applicationId = _id;
 
+            const expiryDate = dayjs().add(1, 'year').format('YYYY-MM-DD');
+
+            memberObj.expiryDate = expiryDate;
+
             console.log('memberObj', memberObj)
 
             const member = await Member.create(memberObj);

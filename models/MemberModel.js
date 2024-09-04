@@ -35,6 +35,8 @@ const MemberSchema = new mongoose.Schema({
     role: { type: String, default: "member", required: true },
     isActive:{type:Boolean, default: true},
 
+    expiryDate:{type: Date}
+
 }, { timestamps: true })
 
 const Member = mongoose.model("Member", MemberSchema);
