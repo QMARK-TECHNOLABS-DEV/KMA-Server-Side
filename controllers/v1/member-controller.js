@@ -83,7 +83,7 @@ memberCtrl.UpdateMember = async (req, res) => {
         const member = await Member.findById(Id)
         if (!member) return res.status(404).json({ msg: "Member not found" });
 
-        const { password, business, hasRenewed, ...updateObj } = req.body;
+        const { password, business, ...updateObj } = req.body;
         console.log('updateObj', updateObj)
 
         if(business){
@@ -117,12 +117,6 @@ memberCtrl.UpdateMember = async (req, res) => {
                 console.log(error)
             }
 
-        }
-
-        if(hasRenewed && typeof hasRenewed === 'boolean' && hasRenewed === true){
-            const expiryDate = dayjs().add(1, 'year').format('YYYY-MM-DD');
-
-            updateObj.expiryDate = expiryDate;
         }
 
         console.log({updateObj})
