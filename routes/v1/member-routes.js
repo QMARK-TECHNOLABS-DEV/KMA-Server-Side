@@ -11,6 +11,7 @@ memberRouter.get('', memberCtrl.GetAllMembers)
 
 memberRouter.use(authMiddleware)
 
+memberRouter.post('', upload.single('file'), memberCtrl.createMember)
 memberRouter.put('/:id', upload.single('file'), memberCtrl.UpdateMember)
 memberRouter.patch('/:id', memberCtrl.ChangeMemberActiveStatus)
 memberRouter.delete('/:id', memberCtrl.DeleteMember)
