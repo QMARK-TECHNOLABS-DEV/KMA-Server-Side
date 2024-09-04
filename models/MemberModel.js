@@ -22,7 +22,6 @@ const MemberSchema = new mongoose.Schema({
         regDate: { type: String },
         commenceDate: { type: String },
         authRep: { type: String },
-        altAuthRep: { type: String },
         meetAuthRep: { type: String },
     },
     idProof: {
