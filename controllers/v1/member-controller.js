@@ -1,5 +1,5 @@
 import { isValidObjectId } from "mongoose";
-import {Member} from "../../models/MemberModel.js";
+import { Member } from "../../models/MemberModel.js";
 import { commonController } from "./common-controller.js";
 import bcrypt from "bcrypt";
 
@@ -83,8 +83,20 @@ memberCtrl.UpdateMember = async (req, res) => {
         const member = await Member.findById(Id)
         if (!member) return res.status(404).json({ msg: "Member not found" });
 
-        const updateObj = req.body;
+        const { password, business, ...updateObj } = req.body;
         console.log('updateObj', updateObj)
+
+        if(business){
+            updateObj.business = JSON.parse(business)
+        }
+
+        if (password?.trim()) {
+            const salt = await bcrypt.genSalt(10);
+            const hashedPassword = await bcrypt.hash(password, salt);
+
+            updateObj.password = hashedPassword;
+
+        }
 
         if (req.file) {
             try {
@@ -107,9 +119,13 @@ memberCtrl.UpdateMember = async (req, res) => {
 
         }
 
+        console.log({updateObj})
+
         const updatedMember = await Member.findByIdAndUpdate(Id, {
             $set: updateObj
         }, { new: true });
+
+        console.log({updatedMember})
 
         if (!updatedMember) return res.status(404).json({ msg: "Failed to update" })
 
@@ -127,7 +143,7 @@ memberCtrl.ChangeMemberActiveStatus = async (req, res) => {
 
         const { isActive } = req.body;
 
-        if(typeof isActive !== 'boolean') { return res.status(400).json({ msg: "Invalid value" }) }
+        if (typeof isActive !== 'boolean') { return res.status(400).json({ msg: "Invalid value" }) }
 
         const member = await Member.findByIdAndUpdate(Id, {
             $set: { isActive }
@@ -153,7 +169,7 @@ memberCtrl.DeleteMember = async (req, res) => {
         if (member?.idProof?.name) {
             try {
                 await commonController.deleteFileFromFirebase(`${member?.idProof?.name}`);
-                
+
             } catch (error) {
                 console.log(error)
             }
@@ -191,7 +207,7 @@ memberCtrl.createMember = async (req, res) => {
 
         if (req.file) {
 
-            const { publicUrl, fileName } = await commonController.uploadFileToFirebase( req.file, process.env.MEMBER_FOLDER_PATH );
+            const { publicUrl, fileName } = await commonController.uploadFileToFirebase(req.file, process.env.MEMBER_FOLDER_PATH);
 
             console.log(publicUrl, fileName);
 
@@ -210,6 +226,10 @@ memberCtrl.createMember = async (req, res) => {
 
         createObj.password = hashedPassword;
 
+        const expiryDate = dayjs().add(1, 'year').format('YYYY-MM-DD');
+
+        createObj.expiryDate = expiryDate;
+
         const member = await Member.create(createObj);
 
         if (!member) return res.status(404).json({ msg: "Failed to add member" })
@@ -221,4 +241,4 @@ memberCtrl.createMember = async (req, res) => {
     }
 }
 
-export {memberCtrl} 
+export { memberCtrl } 

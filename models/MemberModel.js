@@ -22,7 +22,6 @@ const MemberSchema = new mongoose.Schema({
         regDate: { type: String },
         commenceDate: { type: String },
         authRep: { type: String },
-        altAuthRep: { type: String },
         meetAuthRep: { type: String },
     },
     idProof: {
@@ -35,6 +34,8 @@ const MemberSchema = new mongoose.Schema({
     },
     role: { type: String, default: "member", required: true },
     isActive:{type:Boolean, default: true},
+
+    expiryDate:{type: Date}
 
 }, { timestamps: true })
 
