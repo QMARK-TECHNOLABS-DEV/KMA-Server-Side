@@ -47,9 +47,36 @@ contactUsController.createContactUs = async (req, res) => {
 // * Function to get all messages in contactus
 contactUsController.getAllContactUs = async (req, res) => {
     try {
-        const collection = mongoose.connection.collection(process.env.CONTACTUS_COLLECTION_NAME);
+        const filters = {}
 
-        const contactUs = await collection.find().sort({ createdAt: -1 }).toArray();
+        const { date } = req.query
+        const searchQuery = req.query.search;
+
+        if (searchQuery) {
+            filters.$or = [
+              { firstname: { $regex: new RegExp(searchQuery, "i") } },
+              { lastname: { $regex: new RegExp(searchQuery, "i") } },
+              { message: { $regex: new RegExp(searchQuery, "i") } },
+            ];
+          }
+          
+
+        if (date) {
+            const parsedDate = dayjs(date, 'DD-MM-YYYY');
+
+            const startOfDay = parsedDate.startOf('day').toISOString();
+            const endOfDay = parsedDate.endOf('day').toISOString();
+
+            filters.createdAt = {
+                $gte: startOfDay,
+                $lt: endOfDay
+            }
+
+        }
+
+        // const collection = mongoose.connection.collection(process.env.CONTACTUS_COLLECTION_NAME);
+
+        const contactUs = await ContactUs.find(filters).sort({ createdAt: -1 });
 
         return res.status(200).json({ contactUs : contactUs });
     } catch (error) {
