@@ -10,6 +10,7 @@ applicationRouter.get('', applicationCtrl.GetAllApplications)
 applicationRouter.get('/count', applicationCtrl.applicationCount)
 applicationRouter.get('/:id', applicationCtrl.GetApplication)
 
-applicationRouter.put('/:id', applicationCtrl.UpdateMembershipStatus)
+applicationRouter.put('/status/:id', applicationCtrl.UpdateMembershipStatus)
+applicationRouter.put('/:id', applicationCtrl.UpdateApplication)
 
 export { applicationRouter }
