@@ -4,6 +4,7 @@ const ApplicationSchema = new mongoose.Schema({
     username: { type: String, required: true, unique: true },
     password: { type: String, required: true },
     applicantName: { type: String },
+    designation: { type: String },
     address: { type: String },
     state: { type: String },
     country: { type: String },

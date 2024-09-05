@@ -18,11 +18,12 @@ dayjs.extend(timezone);
 dayjs.tz.setDefault('Asia/Kolkata');
 
 // * Function to save magazine to MongoDB
-magazineController.saveMagazineToDB = async (title, fileUrl, fileName, coverImageUrl, coverImagefileName) => {
+magazineController.saveMagazineToDB = async (title, issuedDate, fileUrl, fileName, coverImageUrl, coverImagefileName) => {
     const collection = mongoose.connection.collection(process.env.MAGAZINE_COLLECTION_NAME);
 
     const metadata = new Magazines({
         title: title,
+        issuedDate: issuedDate,
         fileUrl: fileUrl,
         fileName: fileName,
         coverImageUrl: coverImageUrl,
@@ -35,7 +36,7 @@ magazineController.saveMagazineToDB = async (title, fileUrl, fileName, coverImag
 // * Function to upload magazine
 magazineController.uploadMagazine = async (req, res) => {
     try {
-        const title = req.body.title;
+        const {title , issuedDate} = req.body;
 
         const file = req.files['file'] ? req.files['file'][0] : null;
         const coverImage = req.files['coverImage'] ? req.files['coverImage'][0] : null;
@@ -44,7 +45,7 @@ magazineController.uploadMagazine = async (req, res) => {
         const { publicUrl: coverImageUrl, fileName: coverImageName } = await commonController.uploadFileToFirebase(coverImage, process.env.MAGAZINE_COVER_FOLDER_PATH);
 
         console.log(fileUrl, fileName, coverImageUrl, coverImageName);
-        await magazineController.saveMagazineToDB(title, fileUrl, fileName, coverImageUrl, coverImageName);
+        await magazineController.saveMagazineToDB(title, issuedDate , fileUrl, fileName, coverImageUrl, coverImageName);
 
         return res.status(201).json({ message: 'Magazine uploaded successfully' });
     } catch (error) {
@@ -66,7 +67,7 @@ magazineController.getAllMagazines = async (req, res) => {
             const startOfDay = parsedDate.startOf('day').toISOString();
             const endOfDay = parsedDate.endOf('day').toISOString();
 
-            filters.createdAt = {
+            filters.issuedDate = {
                 $gte: startOfDay,
                 $lt: endOfDay
             }
@@ -74,7 +75,7 @@ magazineController.getAllMagazines = async (req, res) => {
         }
         const collection = mongoose.connection.collection(process.env.MAGAZINE_COLLECTION_NAME);
 
-        const magazines = await Magazines.find(filters).sort({ createdAt: -1 });
+        const magazines = await Magazines.find(filters).sort({ issuedDate: -1 });
 
         return res.status(200).json({ magazines : magazines });
     } catch (error) {
@@ -158,7 +159,7 @@ magazineController.updateMagazineById = async (req, res) => {
             return res.status(404).json({ message: 'Magazine not found' });
         }
 
-        const title = req.body.title;
+        const {title, issuedDate} = req.body;
         const file = req.files['file'] ? req.files['file'][0] : null;
         const coverImage = req.files['coverImage'] ? req.files['coverImage'][0] : null;
 
@@ -191,7 +192,7 @@ magazineController.updateMagazineById = async (req, res) => {
             coverImageFileName = fileName;
         }
 
-        await collection.updateOne({ _id: new ObjectId(id) }, { $set: { title, fileUrl, fileName, coverImageUrl, coverImageFileName } });
+        await collection.updateOne({ _id: new ObjectId(id) }, { $set: { title, issuedDate: new Date(issuedDate)  ,  fileUrl, fileName, coverImageUrl, coverImageFileName } });
 
         return res.status(200).json({ message: 'Magazine updated successfully' });
     } catch (error) {

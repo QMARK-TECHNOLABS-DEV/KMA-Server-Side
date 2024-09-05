@@ -9,14 +9,16 @@ const contactUsRouter = express.Router();
 // * Defining the routes for contactus
 
 // * Routes for client side (unprotected routes)
-contactUsRouter.get('', contactUsController.getAllContactUs);
-contactUsRouter.get('/:contactUsId', contactUsController.getContactUsById);
+
+contactUsRouter.post('', contactUsController.createContactUs);
 
 // * Middleware to check the authentication
 contactUsRouter.use(authMiddleware);
 
+contactUsRouter.get('', contactUsController.getAllContactUs);
+contactUsRouter.get('/:contactUsId', contactUsController.getContactUsById);
+
 // * Routes for Admin Dashboard (protected routes)
-contactUsRouter.post('', contactUsController.createContactUs);
 contactUsRouter.delete('/:contactUsId', contactUsController.deleteContactUsById);
 
 // ? Export the contactUsRouter

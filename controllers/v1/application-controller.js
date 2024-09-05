@@ -1,6 +1,7 @@
 import { isValidObjectId } from "mongoose";
 import { Application } from "../../models/ApplicationModel.js";
 import { Member } from "../../models/MemberModel.js";
+import { commonController } from "./common-controller.js";
 
 const applicationCtrl = {};
 
@@ -118,6 +119,84 @@ applicationCtrl.UpdateMembershipStatus = async (req, res) => {
         res.status(500).json({ msg: 'Something went wrong' })
     }
 }
+
+
+applicationCtrl.applicationCount = async(req,res)=>{
+    try {
+        const pending = await Application.countDocuments({status :'pending'})
+        const approved = await Application.countDocuments({status :'approved'})
+        const rejected = await Application.countDocuments({status :'rejected'})
+
+        res.status(200).json({pending, approved, rejected})
+        
+    } catch (error) {
+        console.log(error)
+        res.status(500).json({ msg: 'Something went wrong' })
+    }
+}
+
+
+applicationCtrl.UpdateApplication = async (req, res) => {
+    try {
+        const Id = req.params.id;
+        if (!isValidObjectId(Id)) return res.status(409).json({ msg: "Invalid id" });
+
+        const application = await Application.findById(Id)
+        if (!application) return res.status(404).json({ msg: "Application not found" });
+
+        const { password, business, ...updateObj } = req.body;
+        console.log('updateObj', updateObj)
+
+        if(business){
+            updateObj.business = JSON.parse(business)
+        }
+
+        if (password?.trim()) {
+            const salt = await bcrypt.genSalt(10);
+            const hashedPassword = await bcrypt.hash(password, salt);
+
+            updateObj.password = hashedPassword;
+
+        }
+
+        if (req.file) {
+            try {
+                if (application?.idProof?.name) {
+                    await commonController.deleteFileFromFirebase(`${application?.idProof?.name}`);
+                }
+
+                const { publicUrl, fileName } = await commonController.uploadFileToFirebase(req.file, process.env.MEMBER_FOLDER_PATH);
+
+                console.log(publicUrl, fileName);
+
+                updateObj.idProof = {
+                    name: fileName,
+                    location: publicUrl
+                }
+
+            } catch (error) {
+                console.log(error)
+            }
+
+        }
+
+        console.log({updateObj})
+
+        const updatedApplication = await Application.findByIdAndUpdate(Id, {
+            $set: updateObj
+        }, { new: true });
+
+        console.log({updatedApplication})
+
+        if (!updatedApplication) return res.status(404).json({ msg: "Failed to update" })
+
+        res.status(200).json({ msg: "Updated successfully" })
+    } catch (error) {
+        console.log(error)
+        res.status(500).json({ msg: 'Something went wrong' })
+    }
+}
+
 
 
 export { applicationCtrl }

@@ -6,6 +6,9 @@ const magazineSchema = new mongoose.Schema({
         type: String,
         required: true
     },
+    issuedDate: {
+        type: Date,
+    },
     fileUrl: {
         type: String,
         required: true
