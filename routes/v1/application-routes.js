@@ -6,9 +6,9 @@ const applicationRouter = express.Router();
 
 applicationRouter.use(authMiddleware)
 
-applicationRouter.get('/:id', applicationCtrl.GetApplication)
 applicationRouter.get('', applicationCtrl.GetAllApplications)
-
+applicationRouter.get('/count', applicationCtrl.applicationCount)
+applicationRouter.get('/:id', applicationCtrl.GetApplication)
 
 applicationRouter.put('/:id', applicationCtrl.UpdateMembershipStatus)
 

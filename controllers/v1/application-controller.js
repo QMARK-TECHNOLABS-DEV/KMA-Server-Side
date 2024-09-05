@@ -120,4 +120,19 @@ applicationCtrl.UpdateMembershipStatus = async (req, res) => {
 }
 
 
+applicationCtrl.applicationCount = async(req,res)=>{
+    try {
+        const pending = await Application.countDocuments({status :'pending'})
+        const approved = await Application.countDocuments({status :'approved'})
+        const rejected = await Application.countDocuments({status :'rejected'})
+
+        res.status(200).json({pending, approved, rejected})
+        
+    } catch (error) {
+        console.log(error)
+        res.status(500).json({ msg: 'Something went wrong' })
+    }
+}
+
+
 export { applicationCtrl }
