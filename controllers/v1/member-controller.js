@@ -186,7 +186,7 @@ memberCtrl.DeleteMember = async (req, res) => {
 memberCtrl.createMember = async (req, res) => {
     try {
         const {
-            username, password, applicantName, address, state,
+            username, password, applicantName, designation, address, state,
             country, phone, fax, email, website, contactPerson,
             membershipType, business
         } = req.body;
