@@ -4,6 +4,7 @@ const AscCorpApplnSchema = new mongoose.Schema({
     orgName: { type: String },
     postalAddress: { type: String },
     gstNum: { type: String },
+    password: { type: String},
 
     commnAddress: { type: String },
     telephone: { type: String },

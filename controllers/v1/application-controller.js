@@ -2,12 +2,16 @@ import { isValidObjectId } from "mongoose";
 import { Application } from "../../models/ApplicationModel.js";
 import { Member } from "../../models/MemberModel.js";
 import { commonController } from "./common-controller.js";
+import bcrypt from "bcrypt";
 
 const applicationCtrl = {};
 
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc.js';
 import timezone from 'dayjs/plugin/timezone.js';
+import { IndlAppln } from "../../models/IndlAppln.js";
+import { CorpAppln } from "../../models/CorpAppln.js";
+import { AscCorpAppln } from "../../models/AscCorpApplln.js";
 dayjs.extend(utc);
 dayjs.extend(timezone);
 
@@ -121,14 +125,14 @@ applicationCtrl.UpdateMembershipStatus = async (req, res) => {
 }
 
 
-applicationCtrl.applicationCount = async(req,res)=>{
+applicationCtrl.applicationCount = async (req, res) => {
     try {
-        const pending = await Application.countDocuments({status :'pending'})
-        const approved = await Application.countDocuments({status :'approved'})
-        const rejected = await Application.countDocuments({status :'rejected'})
+        const pending = await Application.countDocuments({ status: 'pending' })
+        const approved = await Application.countDocuments({ status: 'approved' })
+        const rejected = await Application.countDocuments({ status: 'rejected' })
 
-        res.status(200).json({pending, approved, rejected})
-        
+        res.status(200).json({ pending, approved, rejected })
+
     } catch (error) {
         console.log(error)
         res.status(500).json({ msg: 'Something went wrong' })
@@ -147,7 +151,7 @@ applicationCtrl.UpdateApplication = async (req, res) => {
         const { password, business, ...updateObj } = req.body;
         console.log('updateObj', updateObj)
 
-        if(business){
+        if (business) {
             updateObj.business = JSON.parse(business)
         }
 
@@ -180,13 +184,13 @@ applicationCtrl.UpdateApplication = async (req, res) => {
 
         }
 
-        console.log({updateObj})
+        console.log({ updateObj })
 
         const updatedApplication = await Application.findByIdAndUpdate(Id, {
             $set: updateObj
         }, { new: true });
 
-        console.log({updatedApplication})
+        console.log({ updatedApplication })
 
         if (!updatedApplication) return res.status(404).json({ msg: "Failed to update" })
 
@@ -198,50 +202,166 @@ applicationCtrl.UpdateApplication = async (req, res) => {
 }
 
 
-applicationCtrl.CreateApplication = async (req, res, next) => {
+// applicationCtrl.CreateApplication = async (req, res, next) => {
+//     try {
+//         const {
+//             username, password, applicantName, address, state,
+//             country, phone, fax, email, website, contactPerson,
+//             membershipType, business, hasRenewalPay, payMode,
+//         } = req.body;
+
+//         const passwordRegex = /^(?=.*?[A-Z])(?=.*?[a-z])(?=.*?[0-9])(?=.*?[#?!@$%^&*-]).{8,}$/;
+//         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+//         if (!(username || passwordRegex.test(password) || applicantName || address ||
+//             country || emailRegex.test(email) || membershipType || payMode)) {
+//             return res.status(400).json({ msg: "Insufficient Data" })
+//         }
+
+//         const existingUsername = await Application.findOne({ username: username })
+//         console.log(username)
+//         if (existingUsername) return res.status(409).json({ msg: "Username already Exists" })
+
+//         const createObj = req.body;
+
+//         if (req.file) {
+
+//             const { publicUrl, fileName } = await commonController.uploadFileToFirebase(req.file, process.env.MEMBER_FOLDER_PATH);
+
+//             console.log(publicUrl, fileName);
+
+//             createObj.idProof = {
+//                 name: fileName,
+//                 location: publicUrl
+//             }
+//         }
+
+//         if (req.body.business) {
+//             createObj.business = JSON.parse(req.body.business)
+//         }
+
+//         const salt = await bcrypt.genSalt(10);
+//         const hashedPassword = await bcrypt.hash(password, salt);
+
+//         createObj.password = hashedPassword;
+
+//         const application = await Application.create(createObj)
+
+//         console.log(application)
+
+//         res.status(200).json({ msg: "Initiated Registration Process" })
+
+//     } catch (error) {
+//         console.log(error)
+//         res.status(500).json({ msg: "Something went wrong" })
+//     }
+// }
+
+applicationCtrl.CreateIndividualApplication = async (req, res, next) => {
     try {
         const {
-            username, password, applicantName, address, state,
-            country, phone, fax, email, website, contactPerson,
-            membershipType, business, hasRenewalPay, payMode,
+            applicantName, dob, isSeniorCitizen, orgName, gstNum,
+            designation, residenceAddress, phone, mobile, email, officeAddress,
+            officePhone, membershipType, nature,
+            turnover, jobProfile,
+            hasRenewalPay, payMode,
         } = req.body;
 
         const passwordRegex = /^(?=.*?[A-Z])(?=.*?[a-z])(?=.*?[0-9])(?=.*?[#?!@$%^&*-]).{8,}$/;
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-        if (!(username || passwordRegex.test(password) || applicantName || address ||
-            country || emailRegex.test(email) || membershipType || payMode)) {
+        if (!(applicantName && emailRegex.test(email) && membershipType && payMode)) {
             return res.status(400).json({ msg: "Insufficient Data" })
         }
 
-        const existingUsername = await Application.findOne({ username: username })
-        console.log(username)
-        if (existingUsername) return res.status(409).json({ msg: "Username already Exists" })
+        const createObj = {
+            applicantName, dob, isSeniorCitizen, orgName, gstNum,
+            designation, residenceAddress, phone, mobile, email, officeAddress,
+            officePhone, membershipType, nature,
+            turnover, jobProfile,
+            hasRenewalPay, payMode,
+        }
 
-        const createObj = req.body;
+        try {
+            if (req?.body?.qualifications) {
+                createObj.qualifications = JSON.parse(req.body.qualifications)
+            }
+            if (req?.body?.trainings) {
+                createObj.trainings = JSON.parse(req.body.trainings)
+            }
+            if (req?.body?.experiences) {
+                createObj.experiences = JSON.parse(req.body.experiences)
+            }
+            if (req?.body?.references) {
+                createObj.references = JSON.parse(req.body.references)
+            }
 
-        if (req.file) {
+            if (req?.body?.lma) {
+                createObj.lma = JSON.parse(req.body.lma)
+            }
 
-            const { publicUrl, fileName } = await commonController.uploadFileToFirebase( req.file, process.env.MEMBER_FOLDER_PATH );
+        } catch (error) {
+            return res.status(400).json({ msg: "Invalid JSON data" });
 
-            console.log(publicUrl, fileName);
+        }
 
-            createObj.idProof = {
+
+        if (req?.body?.password && passwordRegex.test(req?.body?.password)) {
+            const salt = await bcrypt.genSalt(10);
+            const hashedPassword = await bcrypt.hash(req?.body?.password, salt);
+
+            createObj.password = hashedPassword;
+
+        }
+
+        if (req.files?.photo[0]) {
+            const file = req.files?.photo[0];
+
+            const { publicUrl, fileName } = await commonController.uploadFileToFirebase(file, process.env.MEMBER_FOLDER_PATH);
+
+            createObj.photo = {
                 name: fileName,
                 location: publicUrl
             }
         }
 
-        if (req.body.business) {
-            createObj.business = JSON.parse(req.body.business)
+        if (req.files?.ageProof[0]) {
+            const file = req.files?.ageProof[0];
+
+
+            const { publicUrl, fileName } = await commonController.uploadFileToFirebase(file, process.env.MEMBER_FOLDER_PATH);
+
+            createObj.ageProof = {
+                name: fileName,
+                location: publicUrl
+            }
         }
 
-        const salt = await bcrypt.genSalt(10);
-        const hashedPassword = await bcrypt.hash(password, salt);
+        if (req.files?.degreeCertificate[0]) {
+            const file = req.files?.degreeCertificate[0];
 
-        createObj.password = hashedPassword;
 
-        const application = await Application.create(createObj)
+            const { publicUrl, fileName } = await commonController.uploadFileToFirebase(file, process.env.MEMBER_FOLDER_PATH);
+
+            createObj.degreeCertificate = {
+                name: fileName,
+                location: publicUrl
+            }
+        }
+
+        if (req.files?.bioData[0]) {
+            const file = req.files?.bioData[0];
+
+
+            const { publicUrl, fileName } = await commonController.uploadFileToFirebase(file, process.env.MEMBER_FOLDER_PATH);
+
+            createObj.bioData = {
+                name: fileName,
+                location: publicUrl
+            }
+        }
+
+        const application = await IndlAppln.create(createObj)
 
         console.log(application)
 
@@ -252,5 +372,131 @@ applicationCtrl.CreateApplication = async (req, res, next) => {
         res.status(500).json({ msg: "Something went wrong" })
     }
 }
+
+applicationCtrl.CreateCorporateApplication = async (req, res, next) => {
+    try {
+        const {
+            orgName, gstNum, postalAddress, commnAddress, phone, mobile, fax, email,
+            nature, turnover, executives, supervisors, workers, capitalEmployed,
+            paidupCapital, commnMode, hasRenewalPay, payMode,
+        } = req.body;
+
+        const passwordRegex = /^(?=.*?[A-Z])(?=.*?[a-z])(?=.*?[0-9])(?=.*?[#?!@$%^&*-]).{8,}$/;
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+        if (!(orgName && emailRegex.test(email) && payMode)) {
+            return res.status(400).json({ msg: "Insufficient Data" });
+        }
+
+        const createObj = {
+            orgName, gstNum, postalAddress, commnAddress, phone, mobile, fax, email,
+            nature, turnover, executives, supervisors, workers, capitalEmployed,
+            paidupCapital, commnMode, hasRenewalPay, payMode,
+        };
+
+        try {
+            if (req?.body?.meetReps) createObj.meetReps = JSON.parse(req.body.meetReps);
+            if (req?.body?.references) createObj.references = JSON.parse(req.body.references);
+        } catch (err) {
+            return res.status(400).json({ msg: "Invalid JSON data" });
+        }
+
+        if (req?.body?.password && passwordRegex.test(req?.body?.password)) {
+            const salt = await bcrypt.genSalt(10);
+            createObj.password = await bcrypt.hash(req?.body?.password, salt);
+        }
+
+        if (req?.body?.meetReps && req.files) {
+            const photoKeys = Object.keys(req.files).filter(key => key.startsWith('photo'));
+
+            for (let photoKey of photoKeys) {
+                const file = req.files[photoKey][0];
+
+                const { publicUrl, fileName } = await commonController.uploadFileToFirebase(file, process.env.MEMBER_FOLDER_PATH);
+
+                const photoIndex = photoKey.match(/\d+/)[0];
+                const meetRepIndex = createObj?.meetReps?.findIndex((item) => item.id == photoIndex);
+
+                if (meetRepIndex !== -1) {
+                    createObj.meetReps[meetRepIndex].photo = {
+                        name: fileName,
+                        location: publicUrl,
+                    };
+                }
+            }
+        }
+
+        const application = await CorpAppln.create(createObj);
+        console.log(application);
+
+        return res.status(200).json({ msg: "Initiated Registration Process" });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ msg: "Something went wrong" });
+    }
+};
+
+applicationCtrl.CreateAssociateCorporateApplication = async (req, res, next) => {
+    try {
+        const {
+            orgName, gstNum, postalAddress, commnAddress, phone, mobile, fax, email,
+            nature, turnover, executives, supervisors, workers, capitalEmployed,
+            paidupCapital, commnMode, hasRenewalPay, payMode,
+        } = req.body;
+
+        const passwordRegex = /^(?=.*?[A-Z])(?=.*?[a-z])(?=.*?[0-9])(?=.*?[#?!@$%^&*-]).{8,}$/;
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+        if (!(orgName && emailRegex.test(email) && payMode)) {
+            return res.status(400).json({ msg: "Insufficient Data" });
+        }
+
+        const createObj = {
+            orgName, gstNum, postalAddress, commnAddress, phone, mobile, fax, email,
+            nature, turnover, executives, supervisors, workers, capitalEmployed,
+            paidupCapital, commnMode, hasRenewalPay, payMode,
+        };
+
+        try {
+            if (req?.body?.meetReps) createObj.meetReps = JSON.parse(req.body.meetReps);
+            if (req?.body?.references) createObj.references = JSON.parse(req.body.references);
+        } catch (err) {
+            return res.status(400).json({ msg: "Invalid JSON data" });
+        }
+
+        if (req?.body?.password && passwordRegex.test(req?.body?.password)) {
+            const salt = await bcrypt.genSalt(10);
+            createObj.password = await bcrypt.hash(req?.body?.password, salt);
+        }
+
+        if (req?.body?.meetReps && req.files) {
+            const photoKeys = Object.keys(req.files).filter(key => key.startsWith('photo'));
+
+            for (let photoKey of photoKeys) {
+                const file = req.files[photoKey][0];
+
+                const { publicUrl, fileName } = await commonController.uploadFileToFirebase(file, process.env.MEMBER_FOLDER_PATH);
+
+                const photoIndex = photoKey.match(/\d+/)[0];
+                const meetRepIndex = createObj?.meetReps?.findIndex((item) => item.id == photoIndex);
+
+                if (meetRepIndex !== -1) {
+                    createObj.meetReps[meetRepIndex].photo = {
+                        name: fileName,
+                        location: publicUrl,
+                    };
+                }
+            }
+        }
+
+        const application = await AscCorpAppln.create(createObj);
+        console.log(application);
+
+        return res.status(200).json({ msg: "Initiated Registration Process" });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ msg: "Something went wrong" });
+    }
+};
 
 export { applicationCtrl }

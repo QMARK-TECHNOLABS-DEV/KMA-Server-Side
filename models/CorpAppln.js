@@ -2,11 +2,12 @@ import mongoose from "mongoose";
 
 const CorpApplnSchema = new mongoose.Schema({
     orgName: { type: String },
-    postalAddress: { type: String },
     gstNum: { type: String },
+    postalAddress: { type: String },
+    password: { type: String},
 
     commnAddress: { type: String },
-    telephone: { type: String },
+    phone: { type: String },
     mobile: { type: String },
     fax: { type: String },
     email: { type: String, required: true, unique: true },
