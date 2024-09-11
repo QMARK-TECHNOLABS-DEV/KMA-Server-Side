@@ -7,6 +7,8 @@ import multer from "multer";
 
 const upload = multer();
 
+applicationRouter.post('/register', upload.single('file'), applicationCtrl.CreateApplication);
+
 applicationRouter.use(authMiddleware)
 
 applicationRouter.get('', applicationCtrl.GetAllApplications)
