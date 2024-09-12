@@ -29,7 +29,6 @@ applicationRouter.post('/associate',
     upload.fields([
         { name: 'photo1', maxCount: 1 },
         { name: 'photo2', maxCount: 1 },
-       
     ]),
     applicationCtrl.CreateAssociateCorporateApplication);
 
@@ -40,6 +39,30 @@ applicationRouter.get('/count', applicationCtrl.applicationCount)
 applicationRouter.get('/:id', applicationCtrl.GetApplication)
 
 applicationRouter.put('/status/:id', applicationCtrl.UpdateMembershipStatus)
-applicationRouter.put('/:id', upload.single('file'), applicationCtrl.UpdateApplication)
+
+applicationRouter.put('/individual',
+    upload.fields([
+        { name: 'photo', maxCount: 1 },
+        { name: 'ageProof', maxCount: 1 },
+        { name: 'degreeCertificate', maxCount: 1 },
+        { name: 'bioData', maxCount: 1 },
+    ]),
+    applicationCtrl.UpdateIndividualApplication);
+
+applicationRouter.put('/corporate',
+    upload.fields([
+        { name: 'photo1', maxCount: 1 },
+        { name: 'photo2', maxCount: 1 },
+        { name: 'photo3', maxCount: 1 },
+        { name: 'photo4', maxCount: 1 },
+    ]),
+    applicationCtrl.UpdateCorporateApplication);
+
+applicationRouter.put('/associate',
+    upload.fields([
+        { name: 'photo1', maxCount: 1 },
+        { name: 'photo2', maxCount: 1 },
+    ]),
+    applicationCtrl.UpdateAssociateCorporateApplication);
 
 export { applicationRouter }
