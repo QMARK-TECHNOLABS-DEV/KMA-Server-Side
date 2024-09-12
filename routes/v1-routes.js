@@ -14,14 +14,12 @@ import { bannerRouter } from './v1/banners-routes.js';
 import { authRouter } from './v1/auth-routes.js';
 import { applicationRouter } from './v1/application-routes.js';
 import { memberRouter } from './v1/member-routes.js';
-import { guestRouter } from './v1/guest-routes.js';
 import { dashRouter } from './v1/dashboard-routes.js';
 
 // * Create a router for version 1 APIs
 const v1Router = express.Router();
 
 // * Middleware to forward the request to the appropriate routers.
-v1Router.use('', guestRouter);
 v1Router.use('/event', eventsRouter);
 v1Router.use('/gallery', galleryRouter);
 v1Router.use('/hall-enquiries', hallEnquiriesRouter);
@@ -40,7 +38,7 @@ v1Router.use('/application', applicationRouter);
 v1Router.use('/member', memberRouter);
 v1Router.use('/dashboard', dashRouter);
 
-v1Router.use('*', (req,res)=> console.log('Invalid Route'));
+v1Router.use('*', (req,res)=> { res.sendStatus(404)});
 
 // ? Export the v1Router
 export { v1Router };

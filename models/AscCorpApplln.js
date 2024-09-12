@@ -1,0 +1,65 @@
+import mongoose from "mongoose";
+
+const AscCorpApplnSchema = new mongoose.Schema({
+    orgName: { type: String },
+    postalAddress: { type: String },
+    gstNum: { type: String },
+    password: { type: String},
+
+    commnAddress: { type: String },
+    telephone: { type: String },
+    mobile: { type: String },
+    fax: { type: String },
+    email: { type: String, required: true, unique: true },
+
+    nature: { type: String },
+    turnover: { type: String },
+
+    executives: { type: Number },
+    supervisors: { type: Number },
+    workers: { type: Number },
+
+    capitalEmployed: { type: String },
+    paidupCapital: { type: String },
+
+    meetReps: [
+        {
+            type: {
+                name: { type: String },
+                designation: { type: String },
+                telephone: { type: String },
+                mobile: { type: String },
+                email: { type: String },
+                photo: {
+                    type: {
+                        name: { type: String },
+                        location: { type: String },
+                    }
+                },
+            }
+        }
+    ],
+
+    references: [
+        {
+            type: {
+                name: { type: String },
+                address: { type: String },
+                contactNum: { type: String },
+            }
+        }
+    ],
+
+    commnMode: { type: String },
+
+    hasRenewalPay: { type: Boolean },
+    payMode: { type: String },
+
+    // important
+    status: { type: String, default: 'pending' },
+
+}, { timestamps: true })
+
+const AscCorpAppln = mongoose.model("AscCorpAppln", AscCorpApplnSchema);
+
+export { AscCorpAppln };
