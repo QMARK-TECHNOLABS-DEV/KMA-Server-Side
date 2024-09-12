@@ -4,10 +4,8 @@ const MemberSchema = new mongoose.Schema({
     applnType : { type: String },
     applicationId: {type: mongoose.Schema.Types.ObjectId},
 
-    applicantName: { type: String },
-    orgName: { type: String },
-    email: { type: String, required: true, unique: true },
-    mobile: { type: String },
+    email: { type: String, unique: true },
+    mobile: { type: String, unique: true },
 
     password: { type: String},
     code: { type: String },

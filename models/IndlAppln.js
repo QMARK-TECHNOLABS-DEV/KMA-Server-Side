@@ -13,8 +13,8 @@ const IndlApplnSchema = new mongoose.Schema({
 
     residenceAddress: { type: String },
     phone: { type: String },
-    mobile: { type: String },
-    email: { type: String, required: true, unique: true },
+    mobile: { type: String , unique: true},
+    email: { type: String, unique: true },
 
     officeAddress: { type: String },
     officePhone: { type: String },

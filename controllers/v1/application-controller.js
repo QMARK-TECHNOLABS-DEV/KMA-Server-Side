@@ -80,49 +80,49 @@ applicationCtrl.GetAllApplications = async (req, res) => {
 }
 
 
-applicationCtrl.UpdateMembershipStatus = async (req, res) => {
-    try {
-        const Id = req.params.id;
-        if (!isValidObjectId(Id)) return res.status(400).json({ msg: 'Invalid Id' })
+// applicationCtrl.UpdateMembershipStatus = async (req, res) => {
+//     try {
+//         const Id = req.params.id;
+//         if (!isValidObjectId(Id)) return res.status(400).json({ msg: 'Invalid Id' })
 
-        const { status } = req.body;
+//         const { status } = req.body;
 
-        const application = await Application.findByIdAndUpdate(Id, {
-            $set: { status }
-        }, { new: true }).lean()
+//         const application = await Application.findByIdAndUpdate(Id, {
+//             $set: { status }
+//         }, { new: true }).lean()
 
-        if (!application) {
-            return res.status(500).json({ msg: 'Failed to update Membership status' });
-        }
+//         if (!application) {
+//             return res.status(500).json({ msg: 'Failed to update Membership status' });
+//         }
 
-        const memberExistsForApln = await Member.findOne({ applicationId: application?._id })
+//         const memberExistsForApln = await Member.findOne({ applicationId: application?._id })
 
-        if (memberExistsForApln) { return res.status(409).json({ msg: 'Member already exist' }) }
+//         if (memberExistsForApln) { return res.status(409).json({ msg: 'Member already exist' }) }
 
-        if (status === "approved") {
-            const { _id, status, payMode, hasRenewalPay, createdAt, updatedAt, ...memberObj } = application;
+//         if (status === "approved") {
+//             const { _id, status, payMode, hasRenewalPay, createdAt, updatedAt, ...memberObj } = application;
 
-            memberObj.applicationId = _id;
+//             memberObj.applicationId = _id;
 
-            const expiryDate = dayjs().add(1, 'year').format('YYYY-MM-DD');
+//             const expiryDate = dayjs().add(1, 'year').format('YYYY-MM-DD');
 
-            memberObj.expiryDate = expiryDate;
+//             memberObj.expiryDate = expiryDate;
 
-            console.log('memberObj', memberObj)
+//             console.log('memberObj', memberObj)
 
-            const member = await Member.create(memberObj);
+//             const member = await Member.create(memberObj);
 
-            if (!member) {
-                return res.status(500).json({ msg: 'Failed to create Member' });
-            }
-        }
+//             if (!member) {
+//                 return res.status(500).json({ msg: 'Failed to create Member' });
+//             }
+//         }
 
-        res.status(200).json({ msg: "Membership status updated successfully" })
-    } catch (error) {
-        console.log(error)
-        res.status(500).json({ msg: 'Something went wrong' })
-    }
-}
+//         res.status(200).json({ msg: "Membership status updated successfully" })
+//     } catch (error) {
+//         console.log(error)
+//         res.status(500).json({ msg: 'Something went wrong' })
+//     }
+// }
 
 
 applicationCtrl.applicationCount = async (req, res) => {
@@ -150,10 +150,6 @@ applicationCtrl.UpdateApplication = async (req, res) => {
 
         const { password, business, ...updateObj } = req.body;
         console.log('updateObj', updateObj)
-
-        if (business) {
-            updateObj.business = JSON.parse(business)
-        }
 
         if (password?.trim()) {
             const salt = await bcrypt.genSalt(10);
@@ -269,8 +265,13 @@ applicationCtrl.CreateIndividualApplication = async (req, res, next) => {
 
         const passwordRegex = /^(?=.*?[A-Z])(?=.*?[a-z])(?=.*?[0-9])(?=.*?[#?!@$%^&*-]).{8,}$/;
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        const mobileRegex = /^[6-9]\d{9}$/;
 
-        if (!(applicantName && emailRegex.test(email) && membershipType && payMode)) {
+        if(!((email && emailRegex.test(email)) || (mobile && mobileRegex.test(mobile) ))){
+            return res.status(400).json({ msg: "Either email or mobile number should be present" })
+        }
+
+        if (!(applicantName && membershipType && payMode)) {
             return res.status(400).json({ msg: "Insufficient Data" })
         }
 
@@ -383,8 +384,13 @@ applicationCtrl.CreateCorporateApplication = async (req, res, next) => {
 
         const passwordRegex = /^(?=.*?[A-Z])(?=.*?[a-z])(?=.*?[0-9])(?=.*?[#?!@$%^&*-]).{8,}$/;
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        const mobileRegex = /^[6-9]\d{9}$/;
 
-        if (!(orgName && emailRegex.test(email) && payMode)) {
+        if(!((email && emailRegex.test(email)) || (mobile && mobileRegex.test(mobile) ))){
+            return res.status(400).json({ msg: "Either email or mobile number should be present" })
+        }
+
+        if (!(orgName && payMode)) {
             return res.status(400).json({ msg: "Insufficient Data" });
         }
 
@@ -446,8 +452,13 @@ applicationCtrl.CreateAssociateCorporateApplication = async (req, res, next) => 
 
         const passwordRegex = /^(?=.*?[A-Z])(?=.*?[a-z])(?=.*?[0-9])(?=.*?[#?!@$%^&*-]).{8,}$/;
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        const mobileRegex = /^[6-9]\d{9}$/;
 
-        if (!(orgName && emailRegex.test(email) && payMode)) {
+        if(!((email && emailRegex.test(email)) || (mobile && mobileRegex.test(mobile) ))){
+            return res.status(400).json({ msg: "Either email or mobile number should be present" })
+        }
+
+        if (!(orgName && payMode)) {
             return res.status(400).json({ msg: "Insufficient Data" });
         }
 
@@ -498,5 +509,192 @@ applicationCtrl.CreateAssociateCorporateApplication = async (req, res, next) => 
         return res.status(500).json({ msg: "Something went wrong" });
     }
 };
+
+applicationCtrl.UpdateMembershipStatus = async (req, res) => {
+    try {
+        const Id = req.params.id;
+        if (!isValidObjectId(Id)) return res.status(400).json({ msg: 'Invalid Id' })
+
+        const { status, applnType } = req.body;
+
+        let application;
+        if (applnType === "individual") {
+            application = await IndlAppln.findByIdAndUpdate(Id, {
+                $set: { status }
+            }, { new: true }).lean()
+
+        }
+        else if (applnType === "corporate") {
+            application = await CorpAppln.findByIdAndUpdate(Id, {
+                $set: { status }
+            }, { new: true }).lean()
+
+        }
+        else if (applnType === "associate") {
+            application = await AscCorpAppln.findByIdAndUpdate(Id, {
+                $set: { status }
+            }, { new: true }).lean()
+
+        }
+
+        if (!application) {
+            return res.status(500).json({ msg: 'Failed to update Membership status' });
+        }
+
+        const memberExistsForApln = await Member.findOne({ applicationId: application?._id, applnType: applnType })
+
+        if (memberExistsForApln) { return res.status(409).json({ msg: 'Member already exist' }) }
+
+        if (status === "approved") {
+            const { _id, email, mobile, password } = application;
+
+            const memberObj = { email, mobile, password }
+            memberObj.applnType = applnType;
+            memberObj.applicationId = _id;
+
+            // adding membership expiry date which is 1 year from now
+            const expiryDate = dayjs().add(1, 'year').format('YYYY-MM-DD');
+
+            memberObj.expiryDate = expiryDate;
+
+            console.log('memberObj', memberObj)
+
+            const member = await Member.create(memberObj);
+
+            if (!member) {
+                return res.status(500).json({ msg: 'Failed to create Member' });
+            }
+        }
+
+        res.status(200).json({ msg: "Membership status updated successfully" })
+    } catch (error) {
+        console.log(error)
+        res.status(500).json({ msg: 'Something went wrong' })
+    }
+}
+
+
+applicationCtrl.UpdateIndividualApplication = async (req, res) => {
+    try {
+       
+        const Id = req.params.id;
+        if (!isValidObjectId(Id)) return res.status(400).json({ msg: 'Invalid Id' })
+
+        const doesExist = await IndlAppln.findById(Id)
+
+        if (!doesExist) { return res.status(404).json({ msg: 'Application not found' }) }
+
+
+        const passwordRegex = /^(?=.*?[A-Z])(?=.*?[a-z])(?=.*?[0-9])(?=.*?[#?!@$%^&*-]).{8,}$/;
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        const mobileRegex = /^[6-9]\d{9}$/;
+
+        const {email, mobile, isSeniorCitizen, qualifications, trainings, experiences,
+            references, lma, password, ...updateObj } = req.body;
+
+        try {
+            if(email && emailRegex.test(email)){
+                updateObj.email = email;
+            }
+
+            if(mobile && mobileRegex.test(mobile)){
+                updateObj.mobile = mobile;
+            }
+
+            if(typeof isSeniorCitizen === 'boolean'){
+                updateObj.isSeniorCitizen = isSeniorCitizen
+            }
+
+            if (qualifications) {
+                updateObj.qualifications = JSON.parse(qualifications)
+            }
+            if (trainings) {
+                updateObj.trainings = JSON.parse(trainings)
+            }
+            if (experiences) {
+                updateObj.experiences = JSON.parse(experiences)
+            }
+            if (references) {
+                updateObj.references = JSON.parse(references)
+            }
+
+            if (lma) {
+                updateObj.lma = JSON.parse(lma)
+            }
+
+        } catch (error) {
+            return res.status(400).json({ msg: "Invalid JSON data" });
+
+        }
+
+
+        if (password && passwordRegex.test(password)) {
+            const salt = await bcrypt.genSalt(10);
+            const hashedPassword = await bcrypt.hash(password, salt);
+
+            updateObj.password = hashedPassword;
+
+        }
+
+        if (req.files?.photo[0]) {
+            const file = req.files?.photo[0];
+
+            const { publicUrl, fileName } = await commonController.uploadFileToFirebase(file, process.env.MEMBER_FOLDER_PATH);
+
+            updateObj.photo = {
+                name: fileName,
+                location: publicUrl
+            }
+        }
+
+        if (req.files?.ageProof[0]) {
+            const file = req.files?.ageProof[0];
+
+
+            const { publicUrl, fileName } = await commonController.uploadFileToFirebase(file, process.env.MEMBER_FOLDER_PATH);
+
+            updateObj.ageProof = {
+                name: fileName,
+                location: publicUrl
+            }
+        }
+
+        if (req.files?.degreeCertificate[0]) {
+            const file = req.files?.degreeCertificate[0];
+
+
+            const { publicUrl, fileName } = await commonController.uploadFileToFirebase(file, process.env.MEMBER_FOLDER_PATH);
+
+            updateObj.degreeCertificate = {
+                name: fileName,
+                location: publicUrl
+            }
+        }
+
+        if (req.files?.bioData[0]) {
+            const file = req.files?.bioData[0];
+
+
+            const { publicUrl, fileName } = await commonController.uploadFileToFirebase(file, process.env.MEMBER_FOLDER_PATH);
+
+            updateObj.bioData = {
+                name: fileName,
+                location: publicUrl
+            }
+        }
+
+        const application = await IndlAppln.findByIdAndUpdate(Id, {
+            $set: updateObj
+        }, { new: true })
+
+
+        console.log(application)
+
+        res.status(200).json({ msg: "Initiated Registration Process" })
+    } catch (error) {
+        console.log(error)
+        res.status(500).json({ msg: 'Something went wrong' })
+    }
+}
 
 export { applicationCtrl }

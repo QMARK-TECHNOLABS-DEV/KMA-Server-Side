@@ -8,9 +8,9 @@ const AscCorpApplnSchema = new mongoose.Schema({
 
     commnAddress: { type: String },
     telephone: { type: String },
-    mobile: { type: String },
+    mobile: { type: String, unique: true },
     fax: { type: String },
-    email: { type: String, required: true, unique: true },
+    email: { type: String, unique: true },
 
     nature: { type: String },
     turnover: { type: String },
