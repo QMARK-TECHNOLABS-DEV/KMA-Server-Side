@@ -11,7 +11,7 @@ import utc from 'dayjs/plugin/utc.js';
 import timezone from 'dayjs/plugin/timezone.js';
 import { IndlAppln } from "../../models/IndlAppln.js";
 import { CorpAppln } from "../../models/CorpAppln.js";
-import { AscCorpAppln } from "../../models/AscCorpApplln.js";
+import { AscCorpAppln } from "../../models/AscCorpAppln.js";
 dayjs.extend(utc);
 dayjs.extend(timezone);
 
@@ -447,15 +447,15 @@ applicationCtrl.UpdateIndividualApplication = async (req, res) => {
             return res.status(400).json({ msg: 'Invalid Id' });
         }
 
-        const doesExist = await IndlAppln.findById(Id);
-        if (!doesExist) {
+        const theIndlAppln = await IndlAppln.findById(Id);
+        if (!theIndlAppln) {
             return res.status(404).json({ msg: 'Application not found' });
         }
 
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         const mobileRegex = /^[6-9]\d{9}$/;
 
-        const { email, mobile, isSeniorCitizen, qualifications, trainings, experiences, references, lma, password, ...updateObj } = req.body;
+        const { email, mobile, isSeniorCitizen, qualifications, trainings, experiences, references, lma, ...updateObj } = req.body;
 
         if (email && emailRegex.test(email)) updateObj.email = email;
         if (mobile && mobileRegex.test(mobile)) updateObj.mobile = mobile;
@@ -475,6 +475,11 @@ applicationCtrl.UpdateIndividualApplication = async (req, res) => {
         const fileFields = ['photo', 'ageProof', 'degreeCertificate', 'bioData'];
         for (const field of fileFields) {
             if (req.files?.[field]?.[0]) {
+                // Delete old image if exists
+                if (theIndlAppln[field]?.name) {
+                    await commonController.deleteFileFromFirebase(theIndlAppln[field]?.name);
+                }
+
                 const file = req.files[field][0];
                 const { publicUrl, fileName } = await commonController.uploadFileToFirebase(file, process.env.MEMBER_FOLDER_PATH);
                 updateObj[field] = { name: fileName, location: publicUrl };
@@ -506,7 +511,7 @@ applicationCtrl.UpdateCorporateApplication = async (req, res) => {
             return res.status(404).json({ msg: 'Application not found' });
         }
 
-        const { email, mobile, meetReps, references, password, ...updateObj } = req.body;
+        const { email, mobile, meetReps, references, ...updateObj } = req.body;
 
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         const mobileRegex = /^[6-9]\d{9}$/;
@@ -572,7 +577,7 @@ applicationCtrl.UpdateAssociateCorporateApplication = async (req, res) => {
             return res.status(404).json({ msg: 'Application not found' });
         }
 
-        const { email, mobile, meetReps, references, password, ...updateObj } = req.body;
+        const { email, mobile, meetReps, references, ...updateObj } = req.body;
 
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         const mobileRegex = /^[6-9]\d{9}$/;
