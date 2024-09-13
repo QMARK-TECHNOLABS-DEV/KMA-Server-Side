@@ -3,6 +3,7 @@ import { Event } from "../../models/events-model.js";
 import { commonController } from "./common-controller.js";
 import { isValidObjectId } from "mongoose";
 import 'dotenv/config';
+import { EventRegister } from "../../models/eventRegister.js";
 
 const { ObjectId } = mongoose.Types;
 
@@ -193,6 +194,69 @@ eventsController.deleteMultiple = async (req, res) => {
         console.log({ response })
 
         res.status(200).json({ message: 'Events archived' });
+
+    } catch (error) {
+        console.log(error);
+        return res.status(500).json({ message: 'Internal server error' });
+    }
+}
+
+eventsController.registerEvent = async (req, res) => {
+    try {
+        const { event, name, phone, email, organization } = req.body;
+        if (!isValidObjectId(event)) { return res.status(400).json({ msg: "Invalid Id" }) }
+
+        const haveEvent = await Event.findById(event)
+        if (!haveEvent) { return res.status(400).json({ msg: "Event not found" }) }
+
+        if (!(event || name || phone || email || organization)) {
+            return res.status(400).json({ msg: "Insufficient Data" })
+        }
+
+        const registration = await EventRegister.create({ event, name, phone, email, organization })
+
+        res.status(200).json({ msg: "Event Registered", registration })
+    } catch (error) {
+        console.log(error);
+        return res.status(500).json({ message: 'Internal server error' });
+    }
+}
+
+eventsController.getAnEventRegistration = async (req, res) => {
+    try {
+        const Id = req.params.id;
+        if (!isValidObjectId(Id)) {
+            return res.status(400).json({ msg: "Invalid Id" })
+        }
+
+        const registration = await EventRegister.findById(Id)
+            .populate('event', '_id title date')
+
+        res.status(200).json({ registration })
+
+    } catch (error) {
+        console.log(error);
+        return res.status(500).json({ message: 'Internal server error' });
+    }
+}
+
+eventsController.getManyEventRegistrations = async (req, res) => {
+    try {
+        // Paginators
+        const page = req.query.page;
+        const entries = req.query.entries;
+
+        const registrations = await EventRegister.find()
+            .populate('event', '_id title date')
+            .sort({ createdAt: -1 })
+
+        let result = registrations;
+
+        if (page && entries) {
+            result = result.slice(((page - 1) * entries), (page * entries))
+        }
+
+        res.status(200).json({ registrations : result })
 
     } catch (error) {
         console.log(error);
