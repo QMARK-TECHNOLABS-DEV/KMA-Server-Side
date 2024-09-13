@@ -9,6 +9,7 @@ import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc.js';
 import timezone from 'dayjs/plugin/timezone.js';
 import { Application } from "../../models/ApplicationModel.js";
+import { IndlAppln } from "../../models/IndlAppln.js";
 dayjs.extend(utc);
 dayjs.extend(timezone);
 
@@ -86,7 +87,7 @@ memberCtrl.UpdateMember = async (req, res) => {
         const { password, business, ...updateObj } = req.body;
         console.log('updateObj', updateObj)
 
-        if(business){
+        if (business) {
             updateObj.business = JSON.parse(business)
         }
 
@@ -119,13 +120,13 @@ memberCtrl.UpdateMember = async (req, res) => {
 
         }
 
-        console.log({updateObj})
+        console.log({ updateObj })
 
         const updatedMember = await Member.findByIdAndUpdate(Id, {
             $set: updateObj
         }, { new: true });
 
-        console.log({updatedMember})
+        console.log({ updatedMember })
 
         if (!updatedMember) return res.status(404).json({ msg: "Failed to update" })
 
@@ -166,14 +167,14 @@ memberCtrl.DeleteMember = async (req, res) => {
         const member = await Member.findByIdAndDelete(Id);
         if (!member) return res.status(404).json({ msg: "member not found" })
 
-        if (member?.idProof?.name) {
-            try {
-                await commonController.deleteFileFromFirebase(`${member?.idProof?.name}`);
+        // if (member?.idProof?.name) {
+        //     try {
+        //         await commonController.deleteFileFromFirebase(`${member?.idProof?.name}`);
 
-            } catch (error) {
-                console.log(error)
-            }
-        }
+        //     } catch (error) {
+        //         console.log(error)
+        //     }
+        // }
 
         res.status(200).json({ msg: "deleted successfully" })
     } catch (error) {
@@ -235,6 +236,308 @@ memberCtrl.createMember = async (req, res) => {
         if (!member) return res.status(404).json({ msg: "Failed to add member" })
 
         res.status(200).json({ msg: "Member added" })
+    } catch (error) {
+        console.log(error)
+        res.status(500).json({ msg: 'Something went wrong' })
+    }
+}
+
+
+memberCtrl.createIndividualMemberByAdmin = async (req, res) => {
+    try {
+
+        const {
+            applicantName, dob, isSeniorCitizen, orgName, gstNum,
+            designation, residenceAddress, phone, mobile, email, officeAddress,
+            officePhone, membershipType, nature,
+            turnover, jobProfile,
+            hasRenewalPay, payMode,
+        } = req.body;
+
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        const mobileRegex = /^[6-9]\d{9}$/;
+
+        if (!((email && emailRegex.test(email)) || (mobile && mobileRegex.test(mobile)))) {
+            return res.status(400).json({ msg: "Either email or mobile number should be present" })
+        }
+
+        if (!(applicantName && membershipType && payMode)) {
+            return res.status(400).json({ msg: "Insufficient Data" })
+        }
+
+        const createObj = {
+            applicantName, dob, isSeniorCitizen, orgName, gstNum,
+            designation, residenceAddress, phone, mobile, email, officeAddress,
+            officePhone, membershipType, nature,
+            turnover, jobProfile,
+            hasRenewalPay, payMode,
+        }
+
+        try {
+            if (req?.body?.qualifications) {
+                createObj.qualifications = JSON.parse(req.body.qualifications)
+            }
+            if (req?.body?.trainings) {
+                createObj.trainings = JSON.parse(req.body.trainings)
+            }
+            if (req?.body?.experiences) {
+                createObj.experiences = JSON.parse(req.body.experiences)
+            }
+            if (req?.body?.references) {
+                createObj.references = JSON.parse(req.body.references)
+            }
+
+            if (req?.body?.lma) {
+                createObj.lma = JSON.parse(req.body.lma)
+            }
+
+        } catch (error) {
+            return res.status(400).json({ msg: "Invalid JSON data" });
+
+        }
+
+        if (req.files?.photo[0]) {
+            const file = req.files?.photo[0];
+
+            const { publicUrl, fileName } = await commonController.uploadFileToFirebase(file, process.env.MEMBER_FOLDER_PATH);
+
+            createObj.photo = {
+                name: fileName,
+                location: publicUrl
+            }
+        }
+
+        if (req.files?.ageProof[0]) {
+            const file = req.files?.ageProof[0];
+
+
+            const { publicUrl, fileName } = await commonController.uploadFileToFirebase(file, process.env.MEMBER_FOLDER_PATH);
+
+            createObj.ageProof = {
+                name: fileName,
+                location: publicUrl
+            }
+        }
+
+        if (req.files?.degreeCertificate[0]) {
+            const file = req.files?.degreeCertificate[0];
+
+
+            const { publicUrl, fileName } = await commonController.uploadFileToFirebase(file, process.env.MEMBER_FOLDER_PATH);
+
+            createObj.degreeCertificate = {
+                name: fileName,
+                location: publicUrl
+            }
+        }
+
+        if (req.files?.bioData[0]) {
+            const file = req.files?.bioData[0];
+
+
+            const { publicUrl, fileName } = await commonController.uploadFileToFirebase(file, process.env.MEMBER_FOLDER_PATH);
+
+            createObj.bioData = {
+                name: fileName,
+                location: publicUrl
+            }
+        }
+
+        const application = await IndlAppln.create(createObj)
+
+        console.log(application)
+
+        if (!application) {
+            return res.status(400).json({ msg: 'Failed to create application' });
+        }
+
+
+        const memberObj = { email, mobile }
+        memberObj.applnType = "individual";
+        memberObj.applicationId = application?._id;
+
+        // adding membership expiry date which is 1 year from now
+        const expiryDate = dayjs().add(1, 'year').format('YYYY-MM-DD');
+
+        memberObj.expiryDate = expiryDate;
+
+        console.log('memberObj', memberObj)
+
+        const member = await Member.create(memberObj);
+
+        if (!member) {
+            return res.status(500).json({ msg: 'Failed to create Member' });
+        }
+
+        res.status(200).json({ msg: "Member created" })
+    } catch (error) {
+        console.log(error)
+        res.status(500).json({ msg: 'Something went wrong' })
+    }
+}
+
+memberCtrl.createCorporateMemberByAdmin = async (req, res) => {
+    try {
+
+        const {
+            orgName, gstNum, postalAddress, commnAddress, phone, mobile, fax, email,
+            nature, turnover, executives, supervisors, workers, capitalEmployed,
+            paidupCapital, commnMode, hasRenewalPay, payMode,
+        } = req.body;
+
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        const mobileRegex = /^[6-9]\d{9}$/;
+
+        if (!((email && emailRegex.test(email)) || (mobile && mobileRegex.test(mobile)))) {
+            return res.status(400).json({ msg: "Either email or mobile number should be present" })
+        }
+
+        if (!(orgName && payMode)) {
+            return res.status(400).json({ msg: "Insufficient Data" });
+        }
+
+        const createObj = {
+            orgName, gstNum, postalAddress, commnAddress, phone, mobile, fax, email,
+            nature, turnover, executives, supervisors, workers, capitalEmployed,
+            paidupCapital, commnMode, hasRenewalPay, payMode,
+        };
+
+        try {
+            if (req?.body?.meetReps) createObj.meetReps = JSON.parse(req.body.meetReps);
+            if (req?.body?.references) createObj.references = JSON.parse(req.body.references);
+        } catch (err) {
+            return res.status(400).json({ msg: "Invalid JSON data" });
+        }
+
+
+        if (req?.body?.meetReps && req.files) {
+            const photoKeys = Object.keys(req.files).filter(key => key.startsWith('photo'));
+
+            for (let photoKey of photoKeys) {
+                const file = req.files[photoKey][0];
+
+                const { publicUrl, fileName } = await commonController.uploadFileToFirebase(file, process.env.MEMBER_FOLDER_PATH);
+
+                const photoIndex = photoKey.match(/\d+/)[0];
+                const meetRepIndex = createObj?.meetReps?.findIndex((item) => item._id == photoIndex);
+
+                if (meetRepIndex !== -1) {
+                    createObj.meetReps[meetRepIndex].photo = {
+                        name: fileName,
+                        location: publicUrl,
+                    };
+                }
+            }
+        }
+
+        const application = await CorpAppln.create(createObj);
+        console.log(application);
+
+        if (!application) {
+            return res.status(400).json({ msg: 'Failed to create application' });
+        }
+
+        const memberObj = { email, mobile }
+        memberObj.applnType = "corporate";
+        memberObj.applicationId = application?._id;
+
+        // adding membership expiry date which is 1 year from now
+        const expiryDate = dayjs().add(1, 'year').format('YYYY-MM-DD');
+
+        memberObj.expiryDate = expiryDate;
+
+        console.log('memberObj', memberObj)
+
+        const member = await Member.create(memberObj);
+
+        if (!member) {
+            return res.status(500).json({ msg: 'Failed to create Member' });
+        }
+
+        res.status(200).json({ msg: "Member created" })
+    } catch (error) {
+        console.log(error)
+        res.status(500).json({ msg: 'Something went wrong' })
+    }
+}
+
+memberCtrl.createAssociateMemberByAdmin = async (req, res) => {
+    try {
+        const {
+            orgName, gstNum, postalAddress, commnAddress, phone, mobile, fax, email,
+            nature, turnover, executives, supervisors, workers, capitalEmployed,
+            paidupCapital, commnMode, hasRenewalPay, payMode,
+        } = req.body;
+
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        const mobileRegex = /^[6-9]\d{9}$/;
+
+        if (!((email && emailRegex.test(email)) || (mobile && mobileRegex.test(mobile)))) {
+            return res.status(400).json({ msg: "Either email or mobile number should be present" })
+        }
+
+        if (!(orgName && payMode)) {
+            return res.status(400).json({ msg: "Insufficient Data" });
+        }
+
+        const createObj = {
+            orgName, gstNum, postalAddress, commnAddress, phone, mobile, fax, email,
+            nature, turnover, executives, supervisors, workers, capitalEmployed,
+            paidupCapital, commnMode, hasRenewalPay, payMode,
+        };
+
+        try {
+            if (req?.body?.meetReps) createObj.meetReps = JSON.parse(req.body.meetReps);
+            if (req?.body?.references) createObj.references = JSON.parse(req.body.references);
+        } catch (err) {
+            return res.status(400).json({ msg: "Invalid JSON data" });
+        }
+
+        if (req?.body?.meetReps && req.files) {
+            const photoKeys = Object.keys(req.files).filter(key => key.startsWith('photo'));
+
+            for (let photoKey of photoKeys) {
+                const file = req.files[photoKey][0];
+
+                const { publicUrl, fileName } = await commonController.uploadFileToFirebase(file, process.env.MEMBER_FOLDER_PATH);
+
+                const photoIndex = photoKey.match(/\d+/)[0];
+                const meetRepIndex = createObj?.meetReps?.findIndex((item) => item._id == photoIndex);
+
+                if (meetRepIndex !== -1) {
+                    createObj.meetReps[meetRepIndex].photo = {
+                        name: fileName,
+                        location: publicUrl,
+                    };
+                }
+            }
+        }
+
+        const application = await AscCorpAppln.create(createObj);
+        console.log(application);
+
+        if (!application) {
+            return res.status(400).json({ msg: 'Failed to create application' });
+        }
+
+        const memberObj = { email, mobile }
+        memberObj.applnType = "associate";
+        memberObj.applicationId = application?._id;
+
+        // adding membership expiry date which is 1 year from now
+        const expiryDate = dayjs().add(1, 'year').format('YYYY-MM-DD');
+
+        memberObj.expiryDate = expiryDate;
+
+        console.log('memberObj', memberObj)
+
+        const member = await Member.create(memberObj);
+
+        if (!member) {
+            return res.status(500).json({ msg: 'Failed to create Member' });
+        }
+
+        res.status(200).json({ msg: "Member created" })
     } catch (error) {
         console.log(error)
         res.status(500).json({ msg: 'Something went wrong' })

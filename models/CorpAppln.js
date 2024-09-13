@@ -4,7 +4,6 @@ const CorpApplnSchema = new mongoose.Schema({
     orgName: { type: String },
     gstNum: { type: String },
     postalAddress: { type: String },
-    password: { type: String},
 
     commnAddress: { type: String },
     phone: { type: String },

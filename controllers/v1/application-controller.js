@@ -150,7 +150,6 @@ applicationCtrl.CreateIndividualApplication = async (req, res, next) => {
             hasRenewalPay, payMode,
         } = req.body;
 
-        const passwordRegex = /^(?=.*?[A-Z])(?=.*?[a-z])(?=.*?[0-9])(?=.*?[#?!@$%^&*-]).{8,}$/;
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         const mobileRegex = /^[6-9]\d{9}$/;
 
@@ -190,15 +189,6 @@ applicationCtrl.CreateIndividualApplication = async (req, res, next) => {
 
         } catch (error) {
             return res.status(400).json({ msg: "Invalid JSON data" });
-
-        }
-
-
-        if (req?.body?.password && passwordRegex.test(req?.body?.password)) {
-            const salt = await bcrypt.genSalt(10);
-            const hashedPassword = await bcrypt.hash(req?.body?.password, salt);
-
-            createObj.password = hashedPassword;
 
         }
 
@@ -269,7 +259,6 @@ applicationCtrl.CreateCorporateApplication = async (req, res, next) => {
             paidupCapital, commnMode, hasRenewalPay, payMode,
         } = req.body;
 
-        const passwordRegex = /^(?=.*?[A-Z])(?=.*?[a-z])(?=.*?[0-9])(?=.*?[#?!@$%^&*-]).{8,}$/;
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         const mobileRegex = /^[6-9]\d{9}$/;
 
@@ -294,10 +283,6 @@ applicationCtrl.CreateCorporateApplication = async (req, res, next) => {
             return res.status(400).json({ msg: "Invalid JSON data" });
         }
 
-        if (req?.body?.password && passwordRegex.test(req?.body?.password)) {
-            const salt = await bcrypt.genSalt(10);
-            createObj.password = await bcrypt.hash(req?.body?.password, salt);
-        }
 
         if (req?.body?.meetReps && req.files) {
             const photoKeys = Object.keys(req.files).filter(key => key.startsWith('photo'));
@@ -337,7 +322,6 @@ applicationCtrl.CreateAssociateCorporateApplication = async (req, res, next) => 
             paidupCapital, commnMode, hasRenewalPay, payMode,
         } = req.body;
 
-        const passwordRegex = /^(?=.*?[A-Z])(?=.*?[a-z])(?=.*?[0-9])(?=.*?[#?!@$%^&*-]).{8,}$/;
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         const mobileRegex = /^[6-9]\d{9}$/;
 
@@ -360,11 +344,6 @@ applicationCtrl.CreateAssociateCorporateApplication = async (req, res, next) => 
             if (req?.body?.references) createObj.references = JSON.parse(req.body.references);
         } catch (err) {
             return res.status(400).json({ msg: "Invalid JSON data" });
-        }
-
-        if (req?.body?.password && passwordRegex.test(req?.body?.password)) {
-            const salt = await bcrypt.genSalt(10);
-            createObj.password = await bcrypt.hash(req?.body?.password, salt);
         }
 
         if (req?.body?.meetReps && req.files) {
@@ -433,9 +412,9 @@ applicationCtrl.UpdateMembershipStatus = async (req, res) => {
         if (memberExistsForApln) { return res.status(409).json({ msg: 'Member already exist' }) }
 
         if (status === "approved") {
-            const { _id, email, mobile, password } = application;
+            const { _id, email, mobile } = application;
 
-            const memberObj = { email, mobile, password }
+            const memberObj = { email, mobile }
             memberObj.applnType = applnType;
             memberObj.applicationId = _id;
 
@@ -473,7 +452,6 @@ applicationCtrl.UpdateIndividualApplication = async (req, res) => {
             return res.status(404).json({ msg: 'Application not found' });
         }
 
-        const passwordRegex = /^(?=.*?[A-Z])(?=.*?[a-z])(?=.*?[0-9])(?=.*?[#?!@$%^&*-]).{8,}$/;
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         const mobileRegex = /^[6-9]\d{9}$/;
 
@@ -493,10 +471,6 @@ applicationCtrl.UpdateIndividualApplication = async (req, res) => {
             return res.status(400).json({ msg: 'Invalid JSON data' });
         }
 
-        if (password && passwordRegex.test(password)) {
-            const salt = await bcrypt.genSalt(10);
-            updateObj.password = await bcrypt.hash(password, salt);
-        }
 
         const fileFields = ['photo', 'ageProof', 'degreeCertificate', 'bioData'];
         for (const field of fileFields) {
@@ -534,7 +508,6 @@ applicationCtrl.UpdateCorporateApplication = async (req, res) => {
 
         const { email, mobile, meetReps, references, password, ...updateObj } = req.body;
 
-        const passwordRegex = /^(?=.*?[A-Z])(?=.*?[a-z])(?=.*?[0-9])(?=.*?[#?!@$%^&*-]).{8,}$/;
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         const mobileRegex = /^[6-9]\d{9}$/;
 
@@ -546,11 +519,6 @@ applicationCtrl.UpdateCorporateApplication = async (req, res) => {
             if (references) updateObj.references = JSON.parse(references);
         } catch (error) {
             return res.status(400).json({ msg: 'Invalid JSON data' });
-        }
-
-        if (password && passwordRegex.test(password)) {
-            const salt = await bcrypt.genSalt(10);
-            updateObj.password = await bcrypt.hash(password, salt);
         }
 
         // Handle photo updates for meetReps
@@ -606,7 +574,6 @@ applicationCtrl.UpdateAssociateCorporateApplication = async (req, res) => {
 
         const { email, mobile, meetReps, references, password, ...updateObj } = req.body;
 
-        const passwordRegex = /^(?=.*?[A-Z])(?=.*?[a-z])(?=.*?[0-9])(?=.*?[#?!@$%^&*-]).{8,}$/;
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         const mobileRegex = /^[6-9]\d{9}$/;
 
@@ -620,10 +587,6 @@ applicationCtrl.UpdateAssociateCorporateApplication = async (req, res) => {
             return res.status(400).json({ msg: 'Invalid JSON data' });
         }
 
-        if (password && passwordRegex.test(password)) {
-            const salt = await bcrypt.genSalt(10);
-            updateObj.password = await bcrypt.hash(password, salt);
-        }
 
         // Handle photo updates for meetReps
         if (req.files) {

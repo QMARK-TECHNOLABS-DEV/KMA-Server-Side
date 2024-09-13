@@ -4,7 +4,6 @@ const IndlApplnSchema = new mongoose.Schema({
     applicantName: { type: String },
     dob: { type: String },
     isSeniorCitizen: { type: Boolean },
-    password: { type: String},
 
     orgName: { type: String },
     gstNum: { type: String },
