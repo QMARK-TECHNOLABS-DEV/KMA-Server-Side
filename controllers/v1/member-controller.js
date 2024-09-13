@@ -87,8 +87,44 @@ memberCtrl.GetManyMembers = async (req, res) => {
             }
         }
 
-        // add aggregation pipeline below to lookup from 3 different application docs
-        const members = await Member.find(filters).sort({ createdAt: -1 })
+        const members = await Member.aggregate([
+            {
+                $lookup: {
+                    from: {
+                        $switch: {
+                            branches: [
+                                { 
+                                    case: { $eq: ["$memberType", "individual"] }, 
+                                    then: "IndlAppln" 
+                                },
+                                { 
+                                    case: { $eq: ["$memberType", "corporate"] }, 
+                                    then: "CorpAppln" 
+                                },
+                                { 
+                                    case: { $eq: ["$memberType", "associate"] }, 
+                                    then: "AscCorpAppln" 
+                                }
+                            ],
+                            default: "IndlAppln" 
+                        }
+                    },
+                    foreignField: "_id",
+                    localField: "applicationId",
+                    as: "application"
+                }
+            },
+            {
+                $unwind: {
+                    path: "$application",
+                    preserveNullAndEmptyArrays: true
+                }
+            },
+            {
+                $match: { ...filters }
+            }
+        ]);
+        
 
         let result = members;
 
@@ -96,7 +132,7 @@ memberCtrl.GetManyMembers = async (req, res) => {
             result = result.slice(((page - 1) * entries), (page * entries))
         }
 
-        res.status(200).json({ member: result })
+        res.status(200).json({ members: result })
     } catch (error) {
         console.log(error)
         res.status(500).json({ msg: 'Something went wrong' })
