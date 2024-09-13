@@ -381,22 +381,22 @@ applicationCtrl.UpdateMembershipStatus = async (req, res) => {
         const Id = req.params.id;
         if (!isValidObjectId(Id)) return res.status(400).json({ msg: 'Invalid Id' })
 
-        const { status, applnType } = req.body;
+        const { status, memberType } = req.body;
 
         let application;
-        if (applnType === "individual") {
+        if (memberType === "individual") {
             application = await IndlAppln.findByIdAndUpdate(Id, {
                 $set: { status }
             }, { new: true }).lean()
 
         }
-        else if (applnType === "corporate") {
+        else if (memberType === "corporate") {
             application = await CorpAppln.findByIdAndUpdate(Id, {
                 $set: { status }
             }, { new: true }).lean()
 
         }
-        else if (applnType === "associate") {
+        else if (memberType === "associate") {
             application = await AscCorpAppln.findByIdAndUpdate(Id, {
                 $set: { status }
             }, { new: true }).lean()
@@ -407,7 +407,7 @@ applicationCtrl.UpdateMembershipStatus = async (req, res) => {
             return res.status(500).json({ msg: 'Failed to update Membership status' });
         }
 
-        const memberExistsForApln = await Member.findOne({ applicationId: application?._id, applnType: applnType })
+        const memberExistsForApln = await Member.findOne({ applicationId: application?._id, memberType: memberType })
 
         if (memberExistsForApln) { return res.status(409).json({ msg: 'Member already exist' }) }
 
@@ -415,7 +415,7 @@ applicationCtrl.UpdateMembershipStatus = async (req, res) => {
             const { _id, email, mobile } = application;
 
             const memberObj = { email, mobile }
-            memberObj.applnType = applnType;
+            memberObj.memberType = memberType;
             memberObj.applicationId = _id;
 
             // adding membership expiry date which is 1 year from now

@@ -27,23 +27,39 @@ memberCtrl.GetMember = async (req, res) => {
 
         const member = await Member.findById(Id);
 
-        res.status(200).json({ member })
+        let application;
+        if (member?.memberType === "individual") {
+            application = await IndlAppln.findById(member?.applicationId)
+        }
+        else if (member?.memberType === "corporate") {
+            application = await CorpAppln.findById(member?.applicationId)
+        }
+        else if (member?.memberType === "associate") {
+            application = await AscCorpAppln.findById(member?.applicationId)
+        }
+
+        res.status(200).json({ member, application })
     } catch (error) {
         console.log(error)
         res.status(500).json({ msg: 'Something went wrong' })
     }
 }
 
-memberCtrl.GetAllMembers = async (req, res) => {
+memberCtrl.GetManyMembers = async (req, res) => {
     try {
         //search query;
         const searchQuery = req.query.search;
+        const memberType = req.query.memberType;
 
         // Paginators
         const page = req.query.page;
         const entries = req.query.entries;
 
         const filters = {}
+
+        if (memberType) {
+            filters.memberType = memberType
+        }
 
         const { date } = req.query
 
@@ -60,8 +76,18 @@ memberCtrl.GetAllMembers = async (req, res) => {
 
         }
 
-        if (searchQuery) { filters.applicantName = { $regex: new RegExp(searchQuery, "i") } }
+        if (searchQuery) { 
+            if(memberType === "individual"){
+                filters.applicantName = { $regex: new RegExp(searchQuery, "i") } 
+                
+            }
+            else if(["corporate", "associate"]?.includes(memberType)){
+                filters.orgName = { $regex: new RegExp(searchQuery, "i") } 
 
+            }
+        }
+
+        // add aggregation pipeline below to lookup from 3 different application docs
         const members = await Member.find(filters).sort({ createdAt: -1 })
 
         let result = members;
@@ -77,67 +103,6 @@ memberCtrl.GetAllMembers = async (req, res) => {
     }
 }
 
-
-memberCtrl.UpdateMember = async (req, res) => {
-    try {
-        const Id = req.params.id;
-        if (!isValidObjectId(Id)) return res.status(409).json({ msg: "Invalid id" });
-
-        const member = await Member.findById(Id)
-        if (!member) return res.status(404).json({ msg: "Member not found" });
-
-        const { password, business, ...updateObj } = req.body;
-        console.log('updateObj', updateObj)
-
-        if (business) {
-            updateObj.business = JSON.parse(business)
-        }
-
-        if (password?.trim()) {
-            const salt = await bcrypt.genSalt(10);
-            const hashedPassword = await bcrypt.hash(password, salt);
-
-            updateObj.password = hashedPassword;
-
-        }
-
-        if (req.file) {
-            try {
-                if (member?.idProof?.name) {
-                    await commonController.deleteFileFromFirebase(`${member?.idProof?.name}`);
-                }
-
-                const { publicUrl, fileName } = await commonController.uploadFileToFirebase(req.file, process.env.MEMBER_FOLDER_PATH);
-
-                console.log(publicUrl, fileName);
-
-                updateObj.idProof = {
-                    name: fileName,
-                    location: publicUrl
-                }
-
-            } catch (error) {
-                console.log(error)
-            }
-
-        }
-
-        console.log({ updateObj })
-
-        const updatedMember = await Member.findByIdAndUpdate(Id, {
-            $set: updateObj
-        }, { new: true });
-
-        console.log({ updatedMember })
-
-        if (!updatedMember) return res.status(404).json({ msg: "Failed to update" })
-
-        res.status(200).json({ msg: "Updated successfully" })
-    } catch (error) {
-        console.log(error)
-        res.status(500).json({ msg: 'Something went wrong' })
-    }
-}
 
 memberCtrl.ChangeMemberActiveStatus = async (req, res) => {
     try {
@@ -169,75 +134,8 @@ memberCtrl.DeleteMember = async (req, res) => {
         const member = await Member.findByIdAndDelete(Id);
         if (!member) return res.status(404).json({ msg: "member not found" })
 
-        // if (member?.idProof?.name) {
-        //     try {
-        //         await commonController.deleteFileFromFirebase(`${member?.idProof?.name}`);
-
-        //     } catch (error) {
-        //         console.log(error)
-        //     }
-        // }
 
         res.status(200).json({ msg: "deleted successfully" })
-    } catch (error) {
-        console.log(error)
-        res.status(500).json({ msg: 'Something went wrong' })
-    }
-}
-
-
-memberCtrl.createMember = async (req, res) => {
-    try {
-        const {
-            username, password, applicantName, designation, address, state,
-            country, phone, fax, email, website, contactPerson,
-            membershipType, business
-        } = req.body;
-
-        const passwordRegex = /^(?=.*?[A-Z])(?=.*?[a-z])(?=.*?[0-9])(?=.*?[#?!@$%^&*-]).{8,}$/;
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-        if (!(username || passwordRegex.test(password) || applicantName || address ||
-            country || emailRegex.test(email) || membershipType || payMode)) {
-            return res.status(400).json({ msg: "Insufficient Data" })
-        }
-
-        const existingUsername = await Application.findOne({ username: username })
-        console.log(username)
-        if (existingUsername) return res.status(409).json({ msg: "Username already Exists" })
-
-        const createObj = req.body;
-
-        if (req.file) {
-
-            const { publicUrl, fileName } = await commonController.uploadFileToFirebase(req.file, process.env.MEMBER_FOLDER_PATH);
-
-            console.log(publicUrl, fileName);
-
-            createObj.idProof = {
-                name: fileName,
-                location: publicUrl
-            }
-        }
-
-        if (req.body.business) {
-            createObj.business = JSON.parse(req.body.business)
-        }
-
-        const salt = await bcrypt.genSalt(10);
-        const hashedPassword = await bcrypt.hash(password, salt);
-
-        createObj.password = hashedPassword;
-
-        const expiryDate = dayjs().add(1, 'year').format('YYYY-MM-DD');
-
-        createObj.expiryDate = expiryDate;
-
-        const member = await Member.create(createObj);
-
-        if (!member) return res.status(404).json({ msg: "Failed to add member" })
-
-        res.status(200).json({ msg: "Member added" })
     } catch (error) {
         console.log(error)
         res.status(500).json({ msg: 'Something went wrong' })
@@ -355,7 +253,7 @@ memberCtrl.createIndividualMemberByAdmin = async (req, res) => {
 
 
         const memberObj = { email, mobile }
-        memberObj.applnType = "individual";
+        memberObj.memberType = "individual";
         memberObj.applicationId = application?._id;
 
         // adding membership expiry date which is 1 year from now
@@ -440,7 +338,7 @@ memberCtrl.createCorporateMemberByAdmin = async (req, res) => {
         }
 
         const memberObj = { email, mobile }
-        memberObj.applnType = "corporate";
+        memberObj.memberType = "corporate";
         memberObj.applicationId = application?._id;
 
         // adding membership expiry date which is 1 year from now
@@ -523,7 +421,7 @@ memberCtrl.createAssociateMemberByAdmin = async (req, res) => {
         }
 
         const memberObj = { email, mobile }
-        memberObj.applnType = "associate";
+        memberObj.memberType = "associate";
         memberObj.applicationId = application?._id;
 
         // adding membership expiry date which is 1 year from now
@@ -581,7 +479,7 @@ memberCtrl.updateIndividualMember = async (req, res) => {
             applnUpdateObj.mobile = mobile;
             memberObj.mobile = mobile;
         }
-        
+
         if (expiryDate?.trim()) {
             memberObj.expiryDate = expiryDate
         }
@@ -681,8 +579,8 @@ memberCtrl.updateCorporateMember = async (req, res) => {
             return res.status(400).json({ msg: 'Invalid JSON data' });
         }
 
-         // Handle photo updates for meetReps
-         if (req.files) {
+        // Handle photo updates for meetReps
+        if (req.files) {
             const photoKeys = Object.keys(req.files).filter(key => key.startsWith('photo'));
             let allMeetReps = theCorpAppln.meetReps || [];
 
@@ -699,7 +597,7 @@ memberCtrl.updateCorporateMember = async (req, res) => {
                 // Upload new photo
                 const { publicUrl, fileName } = await commonController.uploadFileToFirebase(uploadFile, process.env.MEMBER_FOLDER_PATH);
                 if (publicUrl && fileName) {
-                    allMeetReps = allMeetReps.map(item => 
+                    allMeetReps = allMeetReps.map(item =>
                         item._id == photoIndex ? { ...item, photo: { name: fileName, location: publicUrl } } : item
                     );
                 }
@@ -707,7 +605,7 @@ memberCtrl.updateCorporateMember = async (req, res) => {
 
             applnUpdateObj.meetReps = allMeetReps;
         }
-     
+
 
         await CorpAppln.findByIdAndUpdate(Id, { $set: applnUpdateObj }, { new: true });
 
@@ -726,7 +624,7 @@ memberCtrl.updateCorporateMember = async (req, res) => {
 }
 
 
-memberCtrl.updateAssociateCorporateMember = async (req, res) => {
+memberCtrl.updateAssociateMember = async (req, res) => {
     try {
 
         const Id = req.params.id;
@@ -774,8 +672,8 @@ memberCtrl.updateAssociateCorporateMember = async (req, res) => {
             return res.status(400).json({ msg: 'Invalid JSON data' });
         }
 
-         // Handle photo updates for meetReps
-         if (req.files) {
+        // Handle photo updates for meetReps
+        if (req.files) {
             const photoKeys = Object.keys(req.files).filter(key => key.startsWith('photo'));
             let allMeetReps = theAscCorpAppln.meetReps || [];
 
@@ -792,7 +690,7 @@ memberCtrl.updateAssociateCorporateMember = async (req, res) => {
                 // Upload new photo
                 const { publicUrl, fileName } = await commonController.uploadFileToFirebase(uploadFile, process.env.MEMBER_FOLDER_PATH);
                 if (publicUrl && fileName) {
-                    allMeetReps = allMeetReps.map(item => 
+                    allMeetReps = allMeetReps.map(item =>
                         item._id == photoIndex ? { ...item, photo: { name: fileName, location: publicUrl } } : item
                     );
                 }
@@ -800,7 +698,7 @@ memberCtrl.updateAssociateCorporateMember = async (req, res) => {
 
             applnUpdateObj.meetReps = allMeetReps;
         }
-     
+
 
         await AscCorpAppln.findByIdAndUpdate(Id, { $set: applnUpdateObj }, { new: true });
 

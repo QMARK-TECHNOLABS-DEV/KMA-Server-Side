@@ -7,12 +7,10 @@ import multer from "multer";
 const upload = multer();
 
 memberRouter.get('/:id', memberCtrl.GetMember)
-memberRouter.get('', memberCtrl.GetAllMembers)
+memberRouter.get('', memberCtrl.GetManyMembers)
 
 memberRouter.use(authMiddleware)
 
-// memberRouter.post('', upload.single('file'), memberCtrl.createMember)
-memberRouter.put('/:id', upload.single('file'), memberCtrl.UpdateMember)
 memberRouter.patch('/:id', memberCtrl.ChangeMemberActiveStatus)
 memberRouter.delete('/:id', memberCtrl.DeleteMember)
 
@@ -40,5 +38,31 @@ memberRouter.post('/associate',
         { name: 'photo2', maxCount: 1 },
     ]),
     memberCtrl.createAssociateMemberByAdmin);
+
+
+memberRouter.put('/individual',
+    upload.fields([
+        { name: 'photo', maxCount: 1 },
+        { name: 'ageProof', maxCount: 1 },
+        { name: 'degreeCertificate', maxCount: 1 },
+        { name: 'bioData', maxCount: 1 },
+    ]),
+    memberCtrl.updateIndividualMember);
+
+memberRouter.put('/corporate',
+    upload.fields([
+        { name: 'photo1', maxCount: 1 },
+        { name: 'photo2', maxCount: 1 },
+        { name: 'photo3', maxCount: 1 },
+        { name: 'photo4', maxCount: 1 },
+    ]),
+    memberCtrl.updateCorporateMember);
+
+memberRouter.put('/associate',
+    upload.fields([
+        { name: 'photo1', maxCount: 1 },
+        { name: 'photo2', maxCount: 1 },
+    ]),
+    memberCtrl.updateAssociateMember);
 
 export { memberRouter }
