@@ -13,11 +13,16 @@ const eventsRouter = express.Router();
 // * Defining the routes for events
 
 // * Routes for client side (unprotected routes)
+eventsRouter.post('/register', eventsController.registerEvent);
+
 eventsRouter.get('/:eventId', eventsController.getEventById);
 eventsRouter.get('', eventsController.getAllEvents);
 
 // * Middleware to check the authentication
 eventsRouter.use(authMiddleware);
+
+eventsRouter.get('/register/:id', eventsController.getAnEventRegistration);
+eventsRouter.get('/register', eventsController.getManyEventRegistrations);
 
 // * Routes for Admin Dashboard (protected routes)
 eventsRouter.put('/multi',  eventsController.archiveMultiple);

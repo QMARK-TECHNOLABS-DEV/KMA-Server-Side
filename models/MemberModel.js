@@ -1,18 +1,15 @@
 import mongoose from "mongoose";
 
 const MemberSchema = new mongoose.Schema({
-    applnType : { type: String },
-    applicationId: {type: mongoose.Schema.Types.ObjectId},
+    memberType : { type: String , required: true, enum: ['individual', 'corporate', 'associate']},
+    applicationId: {type: mongoose.Schema.Types.ObjectId, required: true},
 
-    applicantName: { type: String },
-    orgName: { type: String },
-    email: { type: String, required: true, unique: true },
-    mobile: { type: String },
-
-    password: { type: String},
-    code: { type: String },
+    email: { type: String, unique: true },
+    mobile: { type: String, unique: true },
 
     expiryDate:{type: Date},
+
+    code: { type: String },
 
     // important
     role: { type: String, default: "member", required: true, immutable: true },

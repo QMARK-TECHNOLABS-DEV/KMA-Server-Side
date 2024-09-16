@@ -4,7 +4,6 @@ const IndlApplnSchema = new mongoose.Schema({
     applicantName: { type: String },
     dob: { type: String },
     isSeniorCitizen: { type: Boolean },
-    password: { type: String},
 
     orgName: { type: String },
     gstNum: { type: String },
@@ -13,8 +12,8 @@ const IndlApplnSchema = new mongoose.Schema({
 
     residenceAddress: { type: String },
     phone: { type: String },
-    mobile: { type: String },
-    email: { type: String, required: true, unique: true },
+    mobile: { type: String , unique: true},
+    email: { type: String, unique: true },
 
     officeAddress: { type: String },
     officePhone: { type: String },
