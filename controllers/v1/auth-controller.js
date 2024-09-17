@@ -224,7 +224,7 @@ authController.sendOTPMemberLogin = async (req, res) => {
         let otpExisting;
         const otpObj = {};
 
-        // dding creds to otpObj and delete existing OTP;
+        // adding creds to otpObj and delete existing OTP;
         if (email) {
             otpObj.email = email;
             otpExisting = await OtpModel.findOne({ email })
