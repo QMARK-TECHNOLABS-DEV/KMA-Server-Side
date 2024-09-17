@@ -51,7 +51,7 @@ applicationCtrl.GetAllApplications = async (req, res) => {
         //search query;
         const searchQuery = req.query.search;
         const status = req.query.status;
-        const type = req.query.type;
+        const type = req.query.type || "individual";
 
         // Paginators
         const page = req.query.page;
