@@ -76,39 +76,40 @@ memberCtrl.GetManyMembers = async (req, res) => {
 
         }
 
-        if (searchQuery) { 
-            if(memberType === "individual"){
-                filters.applicantName = { $regex: new RegExp(searchQuery, "i") } 
-                
+        if (searchQuery?.trim()) {
+            if (memberType === "individual") {
+                filters.applicantName = { $regex: new RegExp(searchQuery?.trim(), "i") }
+
             }
-            else if(["corporate", "associate"]?.includes(memberType)){
-                filters.orgName = { $regex: new RegExp(searchQuery, "i") } 
+            else if (["corporate", "associate"]?.includes(memberType)) {
+                filters.orgName = { $regex: new RegExp(searchQuery?.trim(), "i") }
 
             }
         }
 
+        let collectionName;
+
+        switch (memberType) {
+            case 'individual':
+                collectionName = 'indlapplns';
+                break;
+            case 'corporate':
+                collectionName = 'corpapplns';
+                break;
+            case 'associate':
+                collectionName = 'asccorpapplns';
+                break;
+            default:
+                collectionName = 'indlapplns';
+                break;
+        }
+
+        console.log(collectionName)
+
         const members = await Member.aggregate([
             {
                 $lookup: {
-                    from: {
-                        $switch: {
-                            branches: [
-                                { 
-                                    case: { $eq: ["$memberType", "individual"] }, 
-                                    then: "IndlAppln" 
-                                },
-                                { 
-                                    case: { $eq: ["$memberType", "corporate"] }, 
-                                    then: "CorpAppln" 
-                                },
-                                { 
-                                    case: { $eq: ["$memberType", "associate"] }, 
-                                    then: "AscCorpAppln" 
-                                }
-                            ],
-                            default: "IndlAppln" 
-                        }
-                    },
+                    from: collectionName,
                     foreignField: "_id",
                     localField: "applicationId",
                     as: "application"
@@ -124,7 +125,7 @@ memberCtrl.GetManyMembers = async (req, res) => {
                 $match: { ...filters }
             }
         ]);
-        
+
 
         let result = members;
 
