@@ -18,7 +18,7 @@ const IndlApplnSchema = new mongoose.Schema({
     officeAddress: { type: String },
     officePhone: { type: String },
 
-    membershipType: { type: String },
+    membershipFor: { type: String },
 
     lma: {
         type: {

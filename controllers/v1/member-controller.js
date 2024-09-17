@@ -180,11 +180,10 @@ memberCtrl.DeleteMember = async (req, res) => {
 
 memberCtrl.createIndividualMemberByAdmin = async (req, res) => {
     try {
-
         const {
             applicantName, dob, isSeniorCitizen, orgName, gstNum,
             designation, residenceAddress, phone, mobile, email, officeAddress,
-            officePhone, membershipType, nature,
+            officePhone, membershipFor, nature,
             turnover, jobProfile,
             hasRenewalPay, payMode,
         } = req.body;
@@ -196,14 +195,14 @@ memberCtrl.createIndividualMemberByAdmin = async (req, res) => {
             return res.status(400).json({ msg: "Either email or mobile number should be present" })
         }
 
-        if (!(applicantName && membershipType && payMode)) {
+        if (!(applicantName && membershipFor && payMode)) {
             return res.status(400).json({ msg: "Insufficient Data" })
         }
 
         const createObj = {
             applicantName, dob, isSeniorCitizen, orgName, gstNum,
             designation, residenceAddress, phone, mobile, email, officeAddress,
-            officePhone, membershipType, nature,
+            officePhone, membershipFor, nature,
             turnover, jobProfile,
             hasRenewalPay, payMode,
         }
