@@ -1,14 +1,12 @@
 import { isValidObjectId } from "mongoose";
 import { Member } from "../../models/MemberModel.js";
 import { commonController } from "./common-controller.js";
-import bcrypt from "bcrypt";
 
 const memberCtrl = {};
 
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc.js';
 import timezone from 'dayjs/plugin/timezone.js';
-import { Application } from "../../models/ApplicationModel.js";
 import { IndlAppln } from "../../models/IndlAppln.js";
 import { AscCorpAppln } from "../../models/AscCorpAppln.js";
 import { CorpAppln } from "../../models/CorpAppln.js";

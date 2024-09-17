@@ -1,8 +1,6 @@
 import { isValidObjectId } from "mongoose";
-import { Application } from "../../models/ApplicationModel.js";
 import { Member } from "../../models/MemberModel.js";
 import { commonController } from "./common-controller.js";
-import bcrypt from "bcrypt";
 
 const applicationCtrl = {};
 
