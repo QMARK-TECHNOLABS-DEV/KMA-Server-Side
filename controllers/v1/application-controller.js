@@ -145,7 +145,7 @@ applicationCtrl.applicationCount = async (req, res) => {
 applicationCtrl.CreateIndividualApplication = async (req, res, next) => {
     try {
         const {
-            applicantName, dob, isSeniorCitizen, orgName, gstNum,
+            applicantName, dob, orgName, gstNum,
             designation, residenceAddress, phone, mobile, email, officeAddress,
             officePhone, membershipFor, lmaName, lmaMembershipNum, nature,
             turnover, jobProfile,
@@ -189,6 +189,10 @@ applicationCtrl.CreateIndividualApplication = async (req, res, next) => {
             return res.status(400).json({ msg: "Invalid JSON data" });
 
         }
+
+        if (typeof req?.body?.isSeniorCitizen === 'boolean'){
+            createObj.isSeniorCitizen = req.body.isSeniorCitizen;
+        } 
 
         if (req.files?.photo[0]) {
             const file = req.files?.photo[0];
@@ -453,12 +457,18 @@ applicationCtrl.UpdateIndividualApplication = async (req, res) => {
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         const mobileRegex = /^[6-9]\d{9}$/;
 
-        const { email, mobile, isSeniorCitizen, qualifications, trainings, experiences,
+        const { email, mobile, qualifications, trainings, experiences,
             references, lmaName, lmaMembershipNum, ...updateObj } = req.body;
+        
+        console.log({request: req.body})
 
         if (email && emailRegex.test(email)) updateObj.email = email;
         if (mobile && mobileRegex.test(mobile)) updateObj.mobile = mobile;
-        if (typeof isSeniorCitizen === 'boolean') updateObj.isSeniorCitizen = isSeniorCitizen;
+
+        if (typeof req?.body?.isSeniorCitizen === 'boolean'){
+            console.log("senior", req.body.isSeniorCitizen)
+            updateObj.isSeniorCitizen = req.body.isSeniorCitizen;
+        } 
 
         try {
             ['qualifications', 'trainings', 'experiences', 'references'].forEach((field) => {

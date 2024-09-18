@@ -186,7 +186,7 @@ memberCtrl.DeleteMember = async (req, res) => {
 memberCtrl.createIndividualMemberByAdmin = async (req, res) => {
     try {
         const {
-            applicantName, dob, isSeniorCitizen, orgName, gstNum,
+            applicantName, dob, orgName, gstNum,
             designation, residenceAddress, phone, mobile, email, officeAddress,
             officePhone, membershipFor, lmaName, lmaMembershipNum, nature,
             turnover, jobProfile,
@@ -205,7 +205,7 @@ memberCtrl.createIndividualMemberByAdmin = async (req, res) => {
         }
 
         const createObj = {
-            applicantName, dob, isSeniorCitizen, orgName, gstNum,
+            applicantName, dob, orgName, gstNum,
             designation, residenceAddress, phone, mobile, email, officeAddress,
             officePhone, membershipFor, lmaName, lmaMembershipNum, nature,
             turnover, jobProfile,
@@ -230,6 +230,10 @@ memberCtrl.createIndividualMemberByAdmin = async (req, res) => {
             return res.status(400).json({ msg: "Invalid JSON data" });
 
         }
+
+        if (typeof req?.body?.isSeniorCitizen === 'boolean'){
+            createObj.isSeniorCitizen = req.body.isSeniorCitizen;
+        } 
 
         if (req?.files?.photo?.[0]) {
             const file = req?.files?.photo[0];
@@ -501,7 +505,7 @@ memberCtrl.updateIndividualMember = async (req, res) => {
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         const mobileRegex = /^[6-9]\d{9}$/;
 
-        const { email, mobile, expiryDate, code, isSeniorCitizen, qualifications, trainings,
+        const { email, mobile, expiryDate, code, qualifications, trainings,
             experiences, references, ...applnUpdateObj } = req.body;
 
         console.log({ applnUpdateObj })
@@ -524,7 +528,9 @@ memberCtrl.updateIndividualMember = async (req, res) => {
             memberObj.code = code
         }
 
-        if (typeof isSeniorCitizen === 'boolean') applnUpdateObj.isSeniorCitizen = isSeniorCitizen;
+        if (typeof req?.body?.isSeniorCitizen === 'boolean'){
+            createObj.isSeniorCitizen = req.body.isSeniorCitizen;
+        } 
 
         try {
             ['qualifications', 'trainings', 'experiences', 'references'].forEach((field) => {
