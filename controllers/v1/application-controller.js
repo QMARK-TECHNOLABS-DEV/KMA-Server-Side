@@ -143,7 +143,7 @@ applicationCtrl.CreateIndividualApplication = async (req, res, next) => {
         const {
             applicantName, dob, isSeniorCitizen, orgName, gstNum,
             designation, residenceAddress, phone, mobile, email, officeAddress,
-            officePhone, membershipFor, nature,
+            officePhone, membershipFor, lmaName, lmaMembershipNum, nature,
             turnover, jobProfile,
             hasRenewalPay, payMode,
         } = req.body;
@@ -162,7 +162,7 @@ applicationCtrl.CreateIndividualApplication = async (req, res, next) => {
         const createObj = {
             applicantName, dob, isSeniorCitizen, orgName, gstNum,
             designation, residenceAddress, phone, mobile, email, officeAddress,
-            officePhone, membershipFor, nature,
+            officePhone, membershipFor, lmaName, lmaMembershipNum, nature,
             turnover, jobProfile,
             hasRenewalPay, payMode,
         }
@@ -179,10 +179,6 @@ applicationCtrl.CreateIndividualApplication = async (req, res, next) => {
             }
             if (req?.body?.references) {
                 createObj.references = JSON.parse(req.body.references)
-            }
-
-            if (req?.body?.lma) {
-                createObj.lma = JSON.parse(req.body.lma)
             }
 
         } catch (error) {
@@ -453,14 +449,15 @@ applicationCtrl.UpdateIndividualApplication = async (req, res) => {
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         const mobileRegex = /^[6-9]\d{9}$/;
 
-        const { email, mobile, isSeniorCitizen, qualifications, trainings, experiences, references, lma, ...updateObj } = req.body;
+        const { email, mobile, isSeniorCitizen, qualifications, trainings, experiences, 
+            references, lmaName, lmaMembershipNum, ...updateObj } = req.body;
 
         if (email && emailRegex.test(email)) updateObj.email = email;
         if (mobile && mobileRegex.test(mobile)) updateObj.mobile = mobile;
         if (typeof isSeniorCitizen === 'boolean') updateObj.isSeniorCitizen = isSeniorCitizen;
 
         try {
-            ['qualifications', 'trainings', 'experiences', 'references', 'lma'].forEach((field) => {
+            ['qualifications', 'trainings', 'experiences', 'references'].forEach((field) => {
                 if (req.body[field]) {
                     updateObj[field] = JSON.parse(req.body[field]);
                 }

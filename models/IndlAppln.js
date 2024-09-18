@@ -19,13 +19,8 @@ const IndlApplnSchema = new mongoose.Schema({
     officePhone: { type: String },
 
     membershipFor: { type: String },
-
-    lma: {
-        type: {
-            name: { type: String },
-            membershipNum: { type: String },
-        }
-    },
+    lmaName: { type: String },
+    lmaMembershipNum: { type: String },
 
     qualifications: [
         {

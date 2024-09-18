@@ -40,7 +40,7 @@ applicationRouter.get('/:id', applicationCtrl.GetApplication)
 
 applicationRouter.put('/status/:id', applicationCtrl.UpdateMembershipStatus)
 
-applicationRouter.put('/individual',
+applicationRouter.put('/individual/:id',
     upload.fields([
         { name: 'photo', maxCount: 1 },
         { name: 'ageProof', maxCount: 1 },
@@ -49,7 +49,7 @@ applicationRouter.put('/individual',
     ]),
     applicationCtrl.UpdateIndividualApplication);
 
-applicationRouter.put('/corporate',
+applicationRouter.put('/corporate/:id',
     upload.fields([
         { name: 'photo1', maxCount: 1 },
         { name: 'photo2', maxCount: 1 },
@@ -58,7 +58,7 @@ applicationRouter.put('/corporate',
     ]),
     applicationCtrl.UpdateCorporateApplication);
 
-applicationRouter.put('/associate',
+applicationRouter.put('/associate/:id',
     upload.fields([
         { name: 'photo1', maxCount: 1 },
         { name: 'photo2', maxCount: 1 },

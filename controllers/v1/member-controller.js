@@ -23,20 +23,23 @@ memberCtrl.GetMember = async (req, res) => {
         const Id = req.params.id;
         if (!isValidObjectId(Id)) return res.status(409).json({ msg: "Invalid id" });
 
-        const member = await Member.findById(Id);
+        const member = await Member.findById(Id).lean();
 
         let application;
         if (member?.memberType === "individual") {
-            application = await IndlAppln.findById(member?.applicationId)
+            application = await IndlAppln.findById(member?.applicationId).lean()
         }
         else if (member?.memberType === "corporate") {
-            application = await CorpAppln.findById(member?.applicationId)
+            application = await CorpAppln.findById(member?.applicationId).lean()
         }
         else if (member?.memberType === "associate") {
-            application = await AscCorpAppln.findById(member?.applicationId)
+            application = await AscCorpAppln.findById(member?.applicationId).lean()
         }
 
-        res.status(200).json({ member, application })
+       const {_id, status, createdAt, updatedAt, __v, ...restAppln} = application;
+       const {expiryDate, code, ...restMember} = member;
+
+        res.status(200).json({ member : {...restAppln, expiryDate, code}})
     } catch (error) {
         console.log(error)
         res.status(500).json({ msg: 'Something went wrong' })
@@ -183,7 +186,7 @@ memberCtrl.createIndividualMemberByAdmin = async (req, res) => {
         const {
             applicantName, dob, isSeniorCitizen, orgName, gstNum,
             designation, residenceAddress, phone, mobile, email, officeAddress,
-            officePhone, membershipFor, nature,
+            officePhone, membershipFor, lmaName,lmaMembershipNum, nature,
             turnover, jobProfile,
             hasRenewalPay, payMode,
         } = req.body;
@@ -202,7 +205,7 @@ memberCtrl.createIndividualMemberByAdmin = async (req, res) => {
         const createObj = {
             applicantName, dob, isSeniorCitizen, orgName, gstNum,
             designation, residenceAddress, phone, mobile, email, officeAddress,
-            officePhone, membershipFor, nature,
+            officePhone, membershipFor, lmaName,lmaMembershipNum, nature,
             turnover, jobProfile,
             hasRenewalPay, payMode,
         }
@@ -219,10 +222,6 @@ memberCtrl.createIndividualMemberByAdmin = async (req, res) => {
             }
             if (req?.body?.references) {
                 createObj.references = JSON.parse(req.body.references)
-            }
-
-            if (req?.body?.lma) {
-                createObj.lma = JSON.parse(req.body.lma)
             }
 
         } catch (error) {
@@ -500,8 +499,10 @@ memberCtrl.updateIndividualMember = async (req, res) => {
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         const mobileRegex = /^[6-9]\d{9}$/;
 
-        const { email, mobile, isSeniorCitizen, qualifications, trainings,
-            experiences, references, lma, password, expiryDate, code, ...applnUpdateObj } = req.body;
+        const { email, mobile, expiryDate, code, isSeniorCitizen, qualifications, trainings,
+            experiences, references, ...applnUpdateObj } = req.body;
+
+        console.log({applnUpdateObj})    
 
         const memberObj = {};
 
@@ -514,7 +515,7 @@ memberCtrl.updateIndividualMember = async (req, res) => {
             memberObj.mobile = mobile;
         }
 
-        if (expiryDate?.trim()) {
+        if (expiryDate > Date.now()) {
             memberObj.expiryDate = expiryDate
         }
         if (code?.trim()) {
@@ -524,7 +525,7 @@ memberCtrl.updateIndividualMember = async (req, res) => {
         if (typeof isSeniorCitizen === 'boolean') applnUpdateObj.isSeniorCitizen = isSeniorCitizen;
 
         try {
-            ['qualifications', 'trainings', 'experiences', 'references', 'lma'].forEach((field) => {
+            ['qualifications', 'trainings', 'experiences', 'references'].forEach((field) => {
                 if (req.body[field]) {
                     applnUpdateObj[field] = JSON.parse(req.body[field]);
                 }
@@ -548,7 +549,7 @@ memberCtrl.updateIndividualMember = async (req, res) => {
             }
         }
 
-        await IndlAppln.findByIdAndUpdate(Id, { $set: applnUpdateObj }, { new: true });
+        await IndlAppln.findByIdAndUpdate(theIndlAppln?._id, { $set: applnUpdateObj }, { new: true });
 
         const member = await Member.findByIdAndUpdate(Id, { $set: memberObj }, { new: true });
         if (!member) {
@@ -599,7 +600,7 @@ memberCtrl.updateCorporateMember = async (req, res) => {
             memberObj.mobile = mobile;
         }
 
-        if (expiryDate?.trim()) {
+        if (expiryDate > Date.now()) {
             memberObj.expiryDate = expiryDate
         }
         if (code?.trim()) {
@@ -641,7 +642,7 @@ memberCtrl.updateCorporateMember = async (req, res) => {
         }
 
 
-        await CorpAppln.findByIdAndUpdate(Id, { $set: applnUpdateObj }, { new: true });
+        await CorpAppln.findByIdAndUpdate(theCorpAppln?._id, { $set: applnUpdateObj }, { new: true });
 
         const member = await Member.findByIdAndUpdate(Id, { $set: memberObj }, { new: true });
         if (!member) {
@@ -692,7 +693,7 @@ memberCtrl.updateAssociateMember = async (req, res) => {
             memberObj.mobile = mobile;
         }
 
-        if (expiryDate?.trim()) {
+        if (expiryDate > Date.now()) {
             memberObj.expiryDate = expiryDate
         }
         if (code?.trim()) {
@@ -734,7 +735,7 @@ memberCtrl.updateAssociateMember = async (req, res) => {
         }
 
 
-        await AscCorpAppln.findByIdAndUpdate(Id, { $set: applnUpdateObj }, { new: true });
+        await AscCorpAppln.findByIdAndUpdate(theAscCorpAppln?._id, { $set: applnUpdateObj }, { new: true });
 
         const member = await Member.findByIdAndUpdate(Id, { $set: memberObj }, { new: true });
         if (!member) {
