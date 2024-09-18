@@ -326,7 +326,7 @@ memberCtrl.createCorporateMemberByAdmin = async (req, res) => {
             return res.status(400).json({ msg: "Either email or mobile number should be present" })
         }
 
-        if (!(orgName && payMode)) {
+        if (!orgName) {
             return res.status(400).json({ msg: "Insufficient Data" });
         }
 
@@ -353,7 +353,7 @@ memberCtrl.createCorporateMemberByAdmin = async (req, res) => {
                 const { publicUrl, fileName } = await commonController.uploadFileToFirebase(file, process.env.MEMBER_FOLDER_PATH);
 
                 const photoIndex = photoKey.match(/\d+/)[0];
-                const meetRepIndex = createObj?.meetReps?.findIndex((item) => item._id == photoIndex);
+                const meetRepIndex = createObj?.meetReps?.findIndex((item) => item.rid == photoIndex);
 
                 if (meetRepIndex !== -1) {
                     createObj.meetReps[meetRepIndex].photo = {
@@ -410,7 +410,7 @@ memberCtrl.createAssociateMemberByAdmin = async (req, res) => {
             return res.status(400).json({ msg: "Either email or mobile number should be present" })
         }
 
-        if (!(orgName && payMode)) {
+        if (!orgName) {
             return res.status(400).json({ msg: "Insufficient Data" });
         }
 
@@ -436,7 +436,7 @@ memberCtrl.createAssociateMemberByAdmin = async (req, res) => {
                 const { publicUrl, fileName } = await commonController.uploadFileToFirebase(file, process.env.MEMBER_FOLDER_PATH);
 
                 const photoIndex = photoKey.match(/\d+/)[0];
-                const meetRepIndex = createObj?.meetReps?.findIndex((item) => item._id == photoIndex);
+                const meetRepIndex = createObj?.meetReps?.findIndex((item) => item.rid == photoIndex);
 
                 if (meetRepIndex !== -1) {
                     createObj.meetReps[meetRepIndex].photo = {
@@ -620,7 +620,7 @@ memberCtrl.updateCorporateMember = async (req, res) => {
 
             await Promise.all(photoKeys.map(async (photoKey) => {
                 const photoIndex = photoKey.match(/\d+/)[0];
-                const meetRep = allMeetReps.find(item => item._id == photoIndex);
+                const meetRep = allMeetReps.find(item => item.rid == photoIndex);
                 const uploadFile = req?.files[photoKey][0];
 
                 // Delete old photo if exists
@@ -632,7 +632,7 @@ memberCtrl.updateCorporateMember = async (req, res) => {
                 const { publicUrl, fileName } = await commonController.uploadFileToFirebase(uploadFile, process.env.MEMBER_FOLDER_PATH);
                 if (publicUrl && fileName) {
                     allMeetReps = allMeetReps.map(item =>
-                        item._id == photoIndex ? { ...item, photo: { name: fileName, location: publicUrl } } : item
+                        item.rid == photoIndex ? { ...item, photo: { name: fileName, location: publicUrl } } : item
                     );
                 }
             }));
@@ -713,7 +713,7 @@ memberCtrl.updateAssociateMember = async (req, res) => {
 
             await Promise.all(photoKeys.map(async (photoKey) => {
                 const photoIndex = photoKey.match(/\d+/)[0];
-                const meetRep = allMeetReps.find(item => item._id == photoIndex);
+                const meetRep = allMeetReps.find(item => item.rid == photoIndex);
                 const uploadFile = req?.files[photoKey][0];
 
                 // Delete old photo if exists
@@ -725,7 +725,7 @@ memberCtrl.updateAssociateMember = async (req, res) => {
                 const { publicUrl, fileName } = await commonController.uploadFileToFirebase(uploadFile, process.env.MEMBER_FOLDER_PATH);
                 if (publicUrl && fileName) {
                     allMeetReps = allMeetReps.map(item =>
-                        item._id == photoIndex ? { ...item, photo: { name: fileName, location: publicUrl } } : item
+                        item.rid == photoIndex ? { ...item, photo: { name: fileName, location: publicUrl } } : item
                     );
                 }
             }));

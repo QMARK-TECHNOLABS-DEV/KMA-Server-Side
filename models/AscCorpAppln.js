@@ -24,6 +24,7 @@ const AscCorpApplnSchema = new mongoose.Schema({
     meetReps: [
         {
             type: {
+                rid: { type: Number },
                 name: { type: String },
                 designation: { type: String },
                 telephone: { type: String },
