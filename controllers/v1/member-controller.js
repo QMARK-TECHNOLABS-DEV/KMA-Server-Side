@@ -1,14 +1,12 @@
 import { isValidObjectId } from "mongoose";
 import { Member } from "../../models/MemberModel.js";
 import { commonController } from "./common-controller.js";
-import bcrypt from "bcrypt";
 
 const memberCtrl = {};
 
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc.js';
 import timezone from 'dayjs/plugin/timezone.js';
-import { Application } from "../../models/ApplicationModel.js";
 import { IndlAppln } from "../../models/IndlAppln.js";
 import { AscCorpAppln } from "../../models/AscCorpAppln.js";
 import { CorpAppln } from "../../models/CorpAppln.js";
@@ -76,39 +74,40 @@ memberCtrl.GetManyMembers = async (req, res) => {
 
         }
 
-        if (searchQuery) { 
-            if(memberType === "individual"){
-                filters.applicantName = { $regex: new RegExp(searchQuery, "i") } 
-                
+        if (searchQuery?.trim()) {
+            if (memberType === "individual") {
+                filters.applicantName = { $regex: new RegExp(searchQuery?.trim(), "i") }
+
             }
-            else if(["corporate", "associate"]?.includes(memberType)){
-                filters.orgName = { $regex: new RegExp(searchQuery, "i") } 
+            else if (["corporate", "associate"]?.includes(memberType)) {
+                filters.orgName = { $regex: new RegExp(searchQuery?.trim(), "i") }
 
             }
         }
 
+        let collectionName;
+
+        switch (memberType) {
+            case 'individual':
+                collectionName = 'indlapplns';
+                break;
+            case 'corporate':
+                collectionName = 'corpapplns';
+                break;
+            case 'associate':
+                collectionName = 'asccorpapplns';
+                break;
+            default:
+                collectionName = 'indlapplns';
+                break;
+        }
+
+        console.log(collectionName)
+
         const members = await Member.aggregate([
             {
                 $lookup: {
-                    from: {
-                        $switch: {
-                            branches: [
-                                { 
-                                    case: { $eq: ["$memberType", "individual"] }, 
-                                    then: "IndlAppln" 
-                                },
-                                { 
-                                    case: { $eq: ["$memberType", "corporate"] }, 
-                                    then: "CorpAppln" 
-                                },
-                                { 
-                                    case: { $eq: ["$memberType", "associate"] }, 
-                                    then: "AscCorpAppln" 
-                                }
-                            ],
-                            default: "IndlAppln" 
-                        }
-                    },
+                    from: collectionName,
                     foreignField: "_id",
                     localField: "applicationId",
                     as: "application"
@@ -124,7 +123,7 @@ memberCtrl.GetManyMembers = async (req, res) => {
                 $match: { ...filters }
             }
         ]);
-        
+
 
         let result = members;
 
@@ -181,11 +180,10 @@ memberCtrl.DeleteMember = async (req, res) => {
 
 memberCtrl.createIndividualMemberByAdmin = async (req, res) => {
     try {
-
         const {
             applicantName, dob, isSeniorCitizen, orgName, gstNum,
             designation, residenceAddress, phone, mobile, email, officeAddress,
-            officePhone, membershipType, nature,
+            officePhone, membershipFor, nature,
             turnover, jobProfile,
             hasRenewalPay, payMode,
         } = req.body;
@@ -197,14 +195,14 @@ memberCtrl.createIndividualMemberByAdmin = async (req, res) => {
             return res.status(400).json({ msg: "Either email or mobile number should be present" })
         }
 
-        if (!(applicantName && membershipType && payMode)) {
+        if (!(applicantName && membershipFor )) {
             return res.status(400).json({ msg: "Insufficient Data" })
         }
 
         const createObj = {
             applicantName, dob, isSeniorCitizen, orgName, gstNum,
             designation, residenceAddress, phone, mobile, email, officeAddress,
-            officePhone, membershipType, nature,
+            officePhone, membershipFor, nature,
             turnover, jobProfile,
             hasRenewalPay, payMode,
         }
@@ -232,8 +230,8 @@ memberCtrl.createIndividualMemberByAdmin = async (req, res) => {
 
         }
 
-        if (req.files?.photo[0]) {
-            const file = req.files?.photo[0];
+        if (req?.files?.photo?.[0]) {
+            const file = req?.files?.photo[0];
 
             const { publicUrl, fileName } = await commonController.uploadFileToFirebase(file, process.env.MEMBER_FOLDER_PATH);
 
@@ -243,8 +241,8 @@ memberCtrl.createIndividualMemberByAdmin = async (req, res) => {
             }
         }
 
-        if (req.files?.ageProof[0]) {
-            const file = req.files?.ageProof[0];
+        if (req?.files?.ageProof?.[0]) {
+            const file = req?.files?.ageProof[0];
 
 
             const { publicUrl, fileName } = await commonController.uploadFileToFirebase(file, process.env.MEMBER_FOLDER_PATH);
@@ -255,8 +253,8 @@ memberCtrl.createIndividualMemberByAdmin = async (req, res) => {
             }
         }
 
-        if (req.files?.degreeCertificate[0]) {
-            const file = req.files?.degreeCertificate[0];
+        if (req?.files?.degreeCertificate?.[0]) {
+            const file = req?.files?.degreeCertificate[0];
 
 
             const { publicUrl, fileName } = await commonController.uploadFileToFirebase(file, process.env.MEMBER_FOLDER_PATH);
@@ -267,8 +265,8 @@ memberCtrl.createIndividualMemberByAdmin = async (req, res) => {
             }
         }
 
-        if (req.files?.bioData[0]) {
-            const file = req.files?.bioData[0];
+        if (req?.files?.bioData?.[0]) {
+            const file = req?.files?.bioData[0];
 
 
             const { publicUrl, fileName } = await commonController.uploadFileToFirebase(file, process.env.MEMBER_FOLDER_PATH);
@@ -346,11 +344,11 @@ memberCtrl.createCorporateMemberByAdmin = async (req, res) => {
         }
 
 
-        if (req?.body?.meetReps && req.files) {
-            const photoKeys = Object.keys(req.files).filter(key => key.startsWith('photo'));
+        if (req?.body?.meetReps && req?.files) {
+            const photoKeys = Object.keys(req?.files).filter(key => key.startsWith('photo'));
 
             for (let photoKey of photoKeys) {
-                const file = req.files[photoKey][0];
+                const file = req?.files[photoKey][0];
 
                 const { publicUrl, fileName } = await commonController.uploadFileToFirebase(file, process.env.MEMBER_FOLDER_PATH);
 
@@ -429,11 +427,11 @@ memberCtrl.createAssociateMemberByAdmin = async (req, res) => {
             return res.status(400).json({ msg: "Invalid JSON data" });
         }
 
-        if (req?.body?.meetReps && req.files) {
-            const photoKeys = Object.keys(req.files).filter(key => key.startsWith('photo'));
+        if (req?.body?.meetReps && req?.files) {
+            const photoKeys = Object.keys(req?.files).filter(key => key.startsWith('photo'));
 
             for (let photoKey of photoKeys) {
-                const file = req.files[photoKey][0];
+                const file = req?.files[photoKey][0];
 
                 const { publicUrl, fileName } = await commonController.uploadFileToFirebase(file, process.env.MEMBER_FOLDER_PATH);
 
@@ -538,13 +536,13 @@ memberCtrl.updateIndividualMember = async (req, res) => {
 
         const fileFields = ['photo', 'ageProof', 'degreeCertificate', 'bioData'];
         for (const field of fileFields) {
-            if (req.files?.[field]?.[0]) {
+            if (req?.files?.[field]?.[0]) {
                 // Delete old image if exists
                 if (theIndlAppln[field]?.name) {
                     await commonController.deleteFileFromFirebase(theIndlAppln[field]?.name);
                 }
 
-                const file = req.files[field][0];
+                const file = req?.files[field][0];
                 const { publicUrl, fileName } = await commonController.uploadFileToFirebase(file, process.env.MEMBER_FOLDER_PATH);
                 applnUpdateObj[field] = { name: fileName, location: publicUrl };
             }
@@ -616,14 +614,14 @@ memberCtrl.updateCorporateMember = async (req, res) => {
         }
 
         // Handle photo updates for meetReps
-        if (req.files) {
-            const photoKeys = Object.keys(req.files).filter(key => key.startsWith('photo'));
+        if (req?.files) {
+            const photoKeys = Object.keys(req?.files).filter(key => key.startsWith('photo'));
             let allMeetReps = theCorpAppln.meetReps || [];
 
             await Promise.all(photoKeys.map(async (photoKey) => {
                 const photoIndex = photoKey.match(/\d+/)[0];
                 const meetRep = allMeetReps.find(item => item._id == photoIndex);
-                const uploadFile = req.files[photoKey][0];
+                const uploadFile = req?.files[photoKey][0];
 
                 // Delete old photo if exists
                 if (meetRep?.photo?.name) {
@@ -709,14 +707,14 @@ memberCtrl.updateAssociateMember = async (req, res) => {
         }
 
         // Handle photo updates for meetReps
-        if (req.files) {
-            const photoKeys = Object.keys(req.files).filter(key => key.startsWith('photo'));
+        if (req?.files) {
+            const photoKeys = Object.keys(req?.files).filter(key => key.startsWith('photo'));
             let allMeetReps = theAscCorpAppln.meetReps || [];
 
             await Promise.all(photoKeys.map(async (photoKey) => {
                 const photoIndex = photoKey.match(/\d+/)[0];
                 const meetRep = allMeetReps.find(item => item._id == photoIndex);
-                const uploadFile = req.files[photoKey][0];
+                const uploadFile = req?.files[photoKey][0];
 
                 // Delete old photo if exists
                 if (meetRep?.photo?.name) {

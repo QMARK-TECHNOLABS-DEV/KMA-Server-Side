@@ -1,7 +1,4 @@
-import mongoose from 'mongoose'
 import { Member } from '../../models/MemberModel.js'
-
-import { Application } from '../../models/ApplicationModel.js';
 import { HallEnquiry } from '../../models/hall-enquiries-model.js';
 import { Event } from '../../models/events-model.js';
 import { Reports } from '../../models/reports-model.js';
@@ -10,6 +7,9 @@ import { Magazines } from '../../models/magazine-model.js';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc.js';
 import timezone from 'dayjs/plugin/timezone.js';
+import { IndlAppln } from '../../models/IndlAppln.js';
+import { CorpAppln } from '../../models/CorpAppln.js';
+import { AscCorpAppln } from '../../models/AscCorpAppln.js';
 dayjs.extend(utc);
 dayjs.extend(timezone);
 
@@ -98,7 +98,11 @@ dashCtrl.analytics = async (req, res) => {
 
         }
 
-        const applicationCount = await Application.countDocuments(filter);
+        const IndlApplnCount = await IndlAppln.countDocuments(filter) || 0;
+        const CorpApplnCount = await CorpAppln.countDocuments(filter) || 0;
+        const AscCorpApplnCount = await AscCorpAppln.countDocuments(filter) || 0;
+        const applicationCount = IndlApplnCount + CorpApplnCount + AscCorpApplnCount;
+
         const memberCount = await Member.countDocuments(filter);
         const eventCount = await Event.countDocuments(filter);
         const enquiryCount = await HallEnquiry.countDocuments(filter);
@@ -127,13 +131,17 @@ dashCtrl.recentUpdates = async (req, res) => {
         const startOfDay = dayjs().startOf('day').toISOString();
         const endOfDay = dayjs().endOf('day').toISOString();
 
-        const applicationCount = await Application.countDocuments({
+        const filter = {
             status: 'pending',
             createdAt: {
                 $gte: startOfDay,
                 $lt: endOfDay
             }
-        })
+        }
+        const IndlApplnCount = await IndlAppln.countDocuments(filter) || 0;
+        const CorpApplnCount = await CorpAppln.countDocuments(filter) || 0;
+        const AscCorpApplnCount = await AscCorpAppln.countDocuments(filter) || 0;
+        const applicationCount = IndlApplnCount + CorpApplnCount + AscCorpApplnCount;
 
         const enquiryCount = await HallEnquiry.countDocuments({
             createdAt: {

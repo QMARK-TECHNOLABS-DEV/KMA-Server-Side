@@ -1,8 +1,6 @@
 import { isValidObjectId } from "mongoose";
-import { Application } from "../../models/ApplicationModel.js";
 import { Member } from "../../models/MemberModel.js";
 import { commonController } from "./common-controller.js";
-import bcrypt from "bcrypt";
 
 const applicationCtrl = {};
 
@@ -53,7 +51,7 @@ applicationCtrl.GetAllApplications = async (req, res) => {
         //search query;
         const searchQuery = req.query.search;
         const status = req.query.status;
-        const type = req.query.type;
+        const type = req.query.type || "individual";
 
         // Paginators
         const page = req.query.page;
@@ -145,7 +143,7 @@ applicationCtrl.CreateIndividualApplication = async (req, res, next) => {
         const {
             applicantName, dob, isSeniorCitizen, orgName, gstNum,
             designation, residenceAddress, phone, mobile, email, officeAddress,
-            officePhone, membershipType, nature,
+            officePhone, membershipFor, nature,
             turnover, jobProfile,
             hasRenewalPay, payMode,
         } = req.body;
@@ -157,14 +155,14 @@ applicationCtrl.CreateIndividualApplication = async (req, res, next) => {
             return res.status(400).json({ msg: "Either email or mobile number should be present" })
         }
 
-        if (!(applicantName && membershipType && payMode)) {
+        if (!(applicantName && membershipFor && payMode)) {
             return res.status(400).json({ msg: "Insufficient Data" })
         }
 
         const createObj = {
             applicantName, dob, isSeniorCitizen, orgName, gstNum,
             designation, residenceAddress, phone, mobile, email, officeAddress,
-            officePhone, membershipType, nature,
+            officePhone, membershipFor, nature,
             turnover, jobProfile,
             hasRenewalPay, payMode,
         }

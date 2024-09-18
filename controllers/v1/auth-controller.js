@@ -1,19 +1,37 @@
-import { generateAccessToken , generateRefreshToken } from '../../middlewares/token-middleware.js';
+import { generateAccessToken, generateRefreshToken } from '../../middlewares/token-middleware.js';
 import { Admin } from '../../models/admin-model.js';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import dotenv from 'dotenv';
 import mongoose from 'mongoose';
 import { Member } from '../../models/MemberModel.js';
+import { OtpModel } from '../../models/OtpModel.js';
+import { IndlAppln } from '../../models/IndlAppln.js';
+import { CorpAppln } from '../../models/CorpAppln.js';
+import { AscCorpAppln } from '../../models/AscCorpAppln.js';
+import nodemailer from 'nodemailer';
+import axios from 'axios';
+
 dotenv.config();
 
 // creating a controller object authController
 const authController = {}
 
+const validateEmail = (email) => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+};
+
+const validateMobile = (mobile) => {
+    const mobileRegex = /^[6-9]\d{9}$/;
+    return mobileRegex.test(mobile);   
+
+};
+
 // ADMIN SIGNUP
 authController.adminSignup = async (req, res) => {
     res.setHeader('Access-Control-Allow-Origin', '*');
-    
+
     const { email, password, name } = req.body;
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -55,7 +73,7 @@ authController.adminSignup = async (req, res) => {
 
 
 // ADMIN LOGIN
-authController.adminLogin = async(req, res) => {
+authController.adminLogin = async (req, res) => {
     const email = req.body.email;
     console.log("email", email)
 
@@ -66,7 +84,7 @@ authController.adminLogin = async(req, res) => {
         const emailCaseRegex = new RegExp(email, 'i')
 
         const user = await Admin.findOne({ email: emailCaseRegex }).lean();
-        if(!user) return res.status(401).json({ msg: "Invalid email or password" })
+        if (!user) return res.status(401).json({ msg: "Invalid email or password" })
 
         const isValidPassword = await bcrypt.compare(req.body.password, user.password);
         if (!isValidPassword) return res.status(401).json({ msg: "Invalid email or password" });
@@ -77,7 +95,7 @@ authController.adminLogin = async(req, res) => {
 
         const { password, ...userInfo } = user;
 
-        res.status(200).json({userInfo : userInfo, accessToken, refreshToken})
+        res.status(200).json({ userInfo: userInfo, accessToken, refreshToken })
 
     } catch (error) {
         console.error(error)
@@ -90,8 +108,8 @@ authController.adminLogout = async (req, res) => {
     try {
         res.clearCookie("access_token");
         res.clearCookie("refresh_token");
-    
-        res.sendStatus(204)    
+
+        res.sendStatus(204)
     } catch (error) {
         console.log(error)
     }
@@ -101,42 +119,231 @@ authController.adminLogout = async (req, res) => {
 authController.regenerateAccessToken = async (req, res) => {
     const refreshToken = req.body.refreshToken;
 
-    if (typeof refreshToken !== 'string') return res.status(401).json({ msg: "No refresh token"})
+    if (typeof refreshToken !== 'string') return res.status(401).json({ msg: "No refresh token" })
 
     jwt.verify(refreshToken, process.env.REFRESH_TOKEN_SECRET, (err, user) => {
-        if (err) return res.status(401).json({ msg: "invalid refresh token"})
+        if (err) return res.status(401).json({ msg: "invalid refresh token" })
 
         const accessToken = generateAccessToken({ userId: user._id, role: user.role });
 
         const refreshToken = generateRefreshToken({ userId: user._id, role: user.role })
 
-        console.log({'Access Token ': accessToken })
+        console.log({ 'Access Token ': accessToken })
 
-        res.status(200).json({accessToken , refreshToken});
+        res.status(200).json({ accessToken, refreshToken });
     })
 }
 
 
+const generateOTP = ()=> {
+    const digits = '0123456789';
+    let OTP = '';
+    for (let i = 0; i < 6; i++) {
+        OTP += digits[Math.floor(Math.random() * 10)];
+    }
+    return OTP;
+}
 
-authController.MemberLogin = async (req, res) => {
-    
+const sendOTPEmail = async (email, OTP) => {
     try {
-        const username = req.body.username;
+        const transporter = nodemailer.createTransport({
+            service: 'gmail',
+            auth: {
+                user: process.env.MAIL_USER,
+                pass: process.env.MAIL_PASSWORD,
+            },
+        });
 
-        const user = await Member.findOne({ username: username, isActive:true }).lean();
-        if (!user) return res.status(401).json({ msg: "Invalid username or password" })
+        await transporter.sendMail({
+            from: `"KMA" <${process.env.MAIL_USER}>`,
+            to: email,
+            subject: "OTP",
+            text: 'OTP',
+            html: `
+                <h2>OTP</h2>
+                <span>${OTP}</span>
+            `,
+        });
+    } catch (error) {
+        console.error('Error sending OTP via email:', error);
+        throw error; // Re-throw to handle in the main block
+    }
+};
 
-        const isValidPassword = await bcrypt.compare(req.body.password, user.password);
-        if (!isValidPassword) return res.status(401).json({ msg: "Invalid username or password" });
+const sendOTPViaSMS = async (mobile, OTP) => {
+    try {
+        const options = {
+            method: 'get',
+            url: process.env.FAST2SMS_API_URL,
+            params: {
+                authorization: process.env.FAST2SMS_API_KEY,
+                variables_values: OTP,
+                route: 'otp',
+                numbers: mobile,
+            },
+            headers: {
+                'Cache-Control': 'no-cache',
+            },
+        };
+
+        await axios(options);
+    } catch (error) {
+        console.error('Error sending OTP via SMS:', error);
+        throw error; // Re-throw to handle in the main block
+    }
+};
+
+
+authController.sendOTPMemberLogin = async (req, res) => {
+
+    try {
+        const { email, mobile } = req.body;
+
+        if (!email && !mobile) {
+            return res.status(400).json({ msg: 'Please provide email or mobile number' });
+        }
+
+        const filters = { isActive: true };
+
+        if (email) {
+            if (!validateEmail(email)) {
+                return res.status(400).json({ msg: 'Invalid Email format' });
+            }
+            filters.email = email;
+        } else if (mobile) {
+            if (!validateMobile(mobile)) {
+                return res.status(400).json({ msg: 'Invalid mobile number format' });
+            }
+            filters.mobile = mobile;
+        }
+
+        const user = await Member.findOne(filters).lean();
+        if (!user) return res.status(401).json({ msg: "Invalid credential" })
+
+        // Create OTP, store OTP in db and Send OTP to mail or mobile
+        let otpExisting;
+        const otpObj = {};
+
+        // adding creds to otpObj and delete existing OTP;
+        if (email) {
+            otpObj.email = email;
+            otpExisting = await OtpModel.findOne({ email })
+        }
+        else if (mobile) {
+            otpObj.mobile = mobile;
+            otpExisting = await OtpModel.findOne({ mobile })
+        }
+
+        if (otpExisting?._id) {
+            await OtpModel.findByIdAndDelete(otpExisting?._id);
+        }
+
+        const OTP = generateOTP();
+
+        if (OTP) {
+            otpObj.otp = OTP;
+        }
+
+        const otpDoc = await OtpModel.create(otpObj)
+
+        if (!otpDoc?._id) {
+            return res.status(500).json({ msg: "Unable to generate OTP" })
+        }
+
+        // sent otp to mail using nodemailer
+        try {
+            if (email) {
+                await sendOTPEmail(email, OTP);
+            } else if (mobile) {
+                await sendOTPViaSMS(mobile, OTP);
+            }
+        } catch (error) {
+            console.error('Error sending OTP:', error);
+            return res.status(500).json({ msg: "Unable to send OTP" })
+        }
+
+        res.status(200).json({ msg: 'Otp Sent successfully' })
+
+    } catch (error) {
+        console.error(error)
+        res.status(500).json({ msg: "Something went wrong" })
+    }
+}
+
+
+authController.verifyOTPMemberLogin = async (req, res) => {
+    try {
+        const { otp, email, mobile } = req.body;
+
+        // verify OTP 
+
+        let validOtp;
+        if (email) {
+            validOtp = await OtpModel.findOne({ email, otp })
+        }
+        else if (mobile) {
+            validOtp = await OtpModel.findOne({ mobile, otp })
+        }
+
+        if (!validOtp) {
+            return res.status(403).json({ msg: 'Invalid Otp number' })
+        }
+
+        let user;
+
+        if (email) {
+            user = await Member.findOne({ email, isActive: true }).lean();
+
+        }
+        else if (mobile) {
+            user = await Member.findOne({ mobile, isActive: true }).lean();
+
+        }
+
+        if (!user) {
+            return res.status(409).json({ msg: 'Blocked Member' })
+        }
 
         const accessToken = generateAccessToken({ userId: user._id, role: user.role })
 
         const refreshToken = generateRefreshToken({ userId: user._id, role: user.role })
 
-        const { password, ...userInfo } = user;
+        const userInfo = {
+            memberType: user?.memberType,
+            email: user?.email,
+            mobile: user?.mobile,
+            expiryDate: user?.expiryDate,
+            code: user?.code,
+        }
+
+        let application;
+        if (user?.memberType === "individual") {
+            application = await IndlAppln.findById(user?.applicationId)
+
+            if (application) {
+                userInfo.name = application?.applicantName;
+                userInfo.photo = application?.photo;
+            }
+        }
+        else if (user?.memberType === "corporate") {
+            application = await CorpAppln.findById(user?.applicationId)
+
+            if (application) {
+                userInfo.name = application?.orgName;
+            }
+        }
+        else if (user?.memberType === "associate") {
+            application = await AscCorpAppln.findById(user?.applicationId)
+
+            if (application) {
+                userInfo.name = application?.orgName;
+            }
+        }
+
+         //delete the otp doc after use
+         await OtpModel.findByIdAndDelete(validOtp?._id)
 
         res.status(200).json({ userInfo, accessToken, refreshToken })
-
     } catch (error) {
         console.error(error)
         res.status(500).json({ msg: "Something went wrong" })
