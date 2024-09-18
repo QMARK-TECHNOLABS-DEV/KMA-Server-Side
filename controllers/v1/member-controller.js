@@ -515,7 +515,7 @@ memberCtrl.updateIndividualMember = async (req, res) => {
             memberObj.mobile = mobile;
         }
 
-        if (expiryDate > Date.now()) {
+        if (new Date(expiryDate) >= new Date()) {
             memberObj.expiryDate = expiryDate
         }
         if (code?.trim()) {
@@ -600,7 +600,7 @@ memberCtrl.updateCorporateMember = async (req, res) => {
             memberObj.mobile = mobile;
         }
 
-        if (expiryDate > Date.now()) {
+        if (new Date(expiryDate) >= new Date()) {
             memberObj.expiryDate = expiryDate
         }
         if (code?.trim()) {
@@ -693,9 +693,10 @@ memberCtrl.updateAssociateMember = async (req, res) => {
             memberObj.mobile = mobile;
         }
 
-        if (expiryDate > Date.now()) {
+        if (new Date(expiryDate) >= new Date()) {
             memberObj.expiryDate = expiryDate
         }
+        
         if (code?.trim()) {
             memberObj.code = code
         }
