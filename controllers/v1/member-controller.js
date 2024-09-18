@@ -36,10 +36,12 @@ memberCtrl.GetMember = async (req, res) => {
             application = await AscCorpAppln.findById(member?.applicationId).lean()
         }
 
-       const {_id, status, createdAt, updatedAt, __v, ...restAppln} = application;
-       const {expiryDate, code, ...restMember} = member;
+        const { _id, status, createdAt, updatedAt, __v, photo, ageProof,
+            degreeCertificate, bioData, ...restAppln } = application;
 
-        res.status(200).json({ member : {...restAppln, expiryDate, code}})
+        const { expiryDate, code } = member;
+
+        res.status(200).json({ member: { ...restAppln, expiryDate, code } })
     } catch (error) {
         console.log(error)
         res.status(500).json({ msg: 'Something went wrong' })
@@ -186,7 +188,7 @@ memberCtrl.createIndividualMemberByAdmin = async (req, res) => {
         const {
             applicantName, dob, isSeniorCitizen, orgName, gstNum,
             designation, residenceAddress, phone, mobile, email, officeAddress,
-            officePhone, membershipFor, lmaName,lmaMembershipNum, nature,
+            officePhone, membershipFor, lmaName, lmaMembershipNum, nature,
             turnover, jobProfile,
             hasRenewalPay, payMode,
         } = req.body;
@@ -198,14 +200,14 @@ memberCtrl.createIndividualMemberByAdmin = async (req, res) => {
             return res.status(400).json({ msg: "Either email or mobile number should be present" })
         }
 
-        if (!(applicantName && membershipFor )) {
+        if (!(applicantName && membershipFor)) {
             return res.status(400).json({ msg: "Insufficient Data" })
         }
 
         const createObj = {
             applicantName, dob, isSeniorCitizen, orgName, gstNum,
             designation, residenceAddress, phone, mobile, email, officeAddress,
-            officePhone, membershipFor, lmaName,lmaMembershipNum, nature,
+            officePhone, membershipFor, lmaName, lmaMembershipNum, nature,
             turnover, jobProfile,
             hasRenewalPay, payMode,
         }
@@ -502,7 +504,7 @@ memberCtrl.updateIndividualMember = async (req, res) => {
         const { email, mobile, expiryDate, code, isSeniorCitizen, qualifications, trainings,
             experiences, references, ...applnUpdateObj } = req.body;
 
-        console.log({applnUpdateObj})    
+        console.log({ applnUpdateObj })
 
         const memberObj = {};
 
@@ -696,7 +698,7 @@ memberCtrl.updateAssociateMember = async (req, res) => {
         if (new Date(expiryDate) >= new Date()) {
             memberObj.expiryDate = expiryDate
         }
-        
+
         if (code?.trim()) {
             memberObj.code = code
         }

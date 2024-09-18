@@ -26,20 +26,24 @@ applicationCtrl.GetApplication = async (req, res) => {
         if (!isValidObjectId(Id)) return res.status(409).json({ msg: "Invalid id" });
 
         let application = {};
-        if(type === "individual"){
-            application = await IndlAppln.findById(Id)
+        if (type === "individual") {
+            application = await IndlAppln.findById(Id).lean()
 
         }
-        else if(type === "corporate"){
-            application = await CorpAppln.findById(Id)
+        else if (type === "corporate") {
+            application = await CorpAppln.findById(Id).lean()
 
         }
-        else if(type === "associate"){
-            application = await AscCorpAppln.findById(Id)
+        else if (type === "associate") {
+            application = await AscCorpAppln.findById(Id).lean()
 
         }
 
-        res.status(200).json({ application })
+        const { status, createdAt, updatedAt, __v, photo, ageProof, 
+            degreeCertificate, bioData,
+            ...restAppln } = application;
+
+        res.status(200).json({ application: restAppln })
     } catch (error) {
         console.log(error)
         res.status(500).json({ msg: 'Something went wrong' })
@@ -79,15 +83,15 @@ applicationCtrl.GetAllApplications = async (req, res) => {
 
         let applications = [];
 
-        if(type === "individual"){
+        if (type === "individual") {
             applications = await IndlAppln.find(filters).sort({ createdAt: -1 })
 
         }
-        else if(type === "corporate"){
+        else if (type === "corporate") {
             applications = await CorpAppln.find(filters).sort({ createdAt: -1 })
 
         }
-        else if(type === "associate"){
+        else if (type === "associate") {
             applications = await AscCorpAppln.find(filters).sort({ createdAt: -1 })
 
         }
@@ -449,7 +453,7 @@ applicationCtrl.UpdateIndividualApplication = async (req, res) => {
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         const mobileRegex = /^[6-9]\d{9}$/;
 
-        const { email, mobile, isSeniorCitizen, qualifications, trainings, experiences, 
+        const { email, mobile, isSeniorCitizen, qualifications, trainings, experiences,
             references, lmaName, lmaMembershipNum, ...updateObj } = req.body;
 
         if (email && emailRegex.test(email)) updateObj.email = email;
@@ -539,7 +543,7 @@ applicationCtrl.UpdateCorporateApplication = async (req, res) => {
                 // Upload new photo
                 const { publicUrl, fileName } = await commonController.uploadFileToFirebase(uploadFile, process.env.MEMBER_FOLDER_PATH);
                 if (publicUrl && fileName) {
-                    allMeetReps = allMeetReps.map(item => 
+                    allMeetReps = allMeetReps.map(item =>
                         item.rid == photoIndex ? { ...item, photo: { name: fileName, location: publicUrl } } : item
                     );
                 }
@@ -606,7 +610,7 @@ applicationCtrl.UpdateAssociateCorporateApplication = async (req, res) => {
                 // Upload new photo
                 const { publicUrl, fileName } = await commonController.uploadFileToFirebase(uploadFile, process.env.MEMBER_FOLDER_PATH);
                 if (publicUrl && fileName) {
-                    allMeetReps = allMeetReps.map(item => 
+                    allMeetReps = allMeetReps.map(item =>
                         item.rid == photoIndex ? { ...item, photo: { name: fileName, location: publicUrl } } : item
                     );
                 }
