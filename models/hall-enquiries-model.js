@@ -18,15 +18,17 @@ const hallEnquirySchema = new mongoose.Schema({
         type: String,
         required: true
     },
-    createdAt: {
-        type: Date,
-        default: Date.now
+
+
+    status: {
+        type: String,
+        default: 'enquiry',
+        enum: ['enquiry', 'followup', 'in review', 'confirmed', 'rejected'],
     },
-    updatedAt: {
-        type: Date,
-        default: Date.now
-    }
-});
+
+    remark: { type: String },
+
+}, { timestamps: true });
 
 // * Define the model for the hall-enquiries collection
 const HallEnquiry = mongoose.model(process.env.HALL_ENQUIRIES_COLLECTION_NAME, hallEnquirySchema);
