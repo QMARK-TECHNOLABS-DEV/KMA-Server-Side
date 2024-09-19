@@ -1,6 +1,8 @@
 import mongoose from "mongoose";
 
 const IndlApplnSchema = new mongoose.Schema({
+    applicationType: { type: String, default: 'individual', required: true, immutable: true },
+
     applicantName: { type: String },
     dob: { type: String },
     isSeniorCitizen: { type: Boolean },

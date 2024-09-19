@@ -1,6 +1,8 @@
 import mongoose from "mongoose";
 
 const CorpApplnSchema = new mongoose.Schema({
+    applicationType: { type: String, default: 'corporate', required: true, immutable: true },
+
     orgName: { type: String },
     gstNum: { type: String },
     postalAddress: { type: String },

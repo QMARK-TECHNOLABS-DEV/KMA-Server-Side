@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
 
 const AscCorpApplnSchema = new mongoose.Schema({
+    applicationType: { type: String, default: 'associate', required: true, immutable: true },
     orgName: { type: String },
     postalAddress: { type: String },
     gstNum: { type: String },
