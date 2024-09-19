@@ -15,6 +15,7 @@ hallEnquiriesRouter.post('', hallEnquiriesController.createHallEnquiry);
 hallEnquiriesRouter.use(authMiddleware)
 hallEnquiriesRouter.get('', hallEnquiriesController.getAllHallEnquiries);
 hallEnquiriesRouter.get('/:hallEnquiryId', hallEnquiriesController.getHallEnquiryById);
+hallEnquiriesRouter.put('/:id', hallEnquiriesController.updateHallEnquiry);
 
 // * Routes for Admin Dashboard (protected routes)
 hallEnquiriesRouter.delete('/:hallEnquiryId', hallEnquiriesController.deleteHallEnquiryById);

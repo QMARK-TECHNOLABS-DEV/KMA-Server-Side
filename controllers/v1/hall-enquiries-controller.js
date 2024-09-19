@@ -75,7 +75,7 @@ hallEnquiriesController.updateHallEnquiry = async (req, res) => {
             return res.status(409).json({ message: 'Failed to update' });
         }
 
-        return res.status(201).json({ message: 'Hall enquiry added successfully' });
+        return res.status(200).json({ message: 'Hall enquiry added successfully' });
 
     } catch (error) {
         console.log(error);
