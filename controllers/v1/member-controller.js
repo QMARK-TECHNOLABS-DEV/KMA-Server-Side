@@ -126,6 +126,11 @@ memberCtrl.GetManyMembers = async (req, res) => {
             },
             {
                 $match: { ...filters }
+            },
+            {
+                $sort:{
+                    createdAt: -1
+                }
             }
         ]);
 

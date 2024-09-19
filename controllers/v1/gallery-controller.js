@@ -60,7 +60,11 @@ galleryController.getAllGallery = async (req, res) => {
     try {
         const filters = {}
 
-        const { date } = req.query
+        const { date, eventName } = req.query
+
+        if(eventName?.trim()){
+            filters.eventName = eventName;
+        }
 
         if (date) {
             const parsedDate = dayjs(date, 'DD-MM-YYYY');
