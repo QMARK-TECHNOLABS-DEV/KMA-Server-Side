@@ -20,7 +20,7 @@ galleryRouter.get('/:galleryId', galleryController.getGalleryById);
 galleryRouter.use(authMiddleware);
 
 // * Routes for Admin Dashboard (protected routes)
-galleryRouter.post('', upload.single('file'), galleryController.createGallery);
+galleryRouter.post('', upload.array('files'), galleryController.createGallery);
 galleryRouter.delete('/:galleryId', galleryController.deleteGalleryById);
 galleryRouter.put('/:galleryId', upload.single('file'), galleryController.updateGalleryById);
 
