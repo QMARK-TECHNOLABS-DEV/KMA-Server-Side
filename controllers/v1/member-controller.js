@@ -81,11 +81,11 @@ memberCtrl.GetManyMembers = async (req, res) => {
 
         if (searchQuery?.trim()) {
             if (memberType === "individual") {
-                filters.applicantName = { $regex: new RegExp(searchQuery?.trim(), "i") }
+                filters['application.applicantName'] = { $regex: new RegExp(searchQuery?.trim(), "i") }
 
             }
             else if (["corporate", "associate"]?.includes(memberType)) {
-                filters.orgName = { $regex: new RegExp(searchQuery?.trim(), "i") }
+                filters['application.orgName'] = { $regex: new RegExp(searchQuery?.trim(), "i") }
 
             }
         }
