@@ -26,20 +26,24 @@ applicationCtrl.GetApplication = async (req, res) => {
         if (!isValidObjectId(Id)) return res.status(409).json({ msg: "Invalid id" });
 
         let application = {};
-        if(type === "individual"){
-            application = await IndlAppln.findById(Id)
+        if (type === "individual") {
+            application = await IndlAppln.findById(Id).lean()
 
         }
-        else if(type === "corporate"){
-            application = await CorpAppln.findById(Id)
+        else if (type === "corporate") {
+            application = await CorpAppln.findById(Id).lean()
 
         }
-        else if(type === "associate"){
-            application = await AscCorpAppln.findById(Id)
+        else if (type === "associate") {
+            application = await AscCorpAppln.findById(Id).lean()
 
         }
 
-        res.status(200).json({ application })
+        const { status, createdAt, updatedAt, __v, photo, ageProof, 
+            degreeCertificate, bioData,
+            ...restAppln } = application;
+
+        res.status(200).json({ application: restAppln })
     } catch (error) {
         console.log(error)
         res.status(500).json({ msg: 'Something went wrong' })
@@ -79,15 +83,15 @@ applicationCtrl.GetAllApplications = async (req, res) => {
 
         let applications = [];
 
-        if(type === "individual"){
+        if (type === "individual") {
             applications = await IndlAppln.find(filters).sort({ createdAt: -1 })
 
         }
-        else if(type === "corporate"){
+        else if (type === "corporate") {
             applications = await CorpAppln.find(filters).sort({ createdAt: -1 })
 
         }
-        else if(type === "associate"){
+        else if (type === "associate") {
             applications = await AscCorpAppln.find(filters).sort({ createdAt: -1 })
 
         }
@@ -141,9 +145,9 @@ applicationCtrl.applicationCount = async (req, res) => {
 applicationCtrl.CreateIndividualApplication = async (req, res, next) => {
     try {
         const {
-            applicantName, dob, isSeniorCitizen, orgName, gstNum,
+            applicantName, dob, orgName, gstNum,
             designation, residenceAddress, phone, mobile, email, officeAddress,
-            officePhone, membershipFor, nature,
+            officePhone, membershipFor, lmaName, lmaMembershipNum, nature,
             turnover, jobProfile,
             hasRenewalPay, payMode,
         } = req.body;
@@ -162,7 +166,7 @@ applicationCtrl.CreateIndividualApplication = async (req, res, next) => {
         const createObj = {
             applicantName, dob, isSeniorCitizen, orgName, gstNum,
             designation, residenceAddress, phone, mobile, email, officeAddress,
-            officePhone, membershipFor, nature,
+            officePhone, membershipFor, lmaName, lmaMembershipNum, nature,
             turnover, jobProfile,
             hasRenewalPay, payMode,
         }
@@ -181,14 +185,14 @@ applicationCtrl.CreateIndividualApplication = async (req, res, next) => {
                 createObj.references = JSON.parse(req.body.references)
             }
 
-            if (req?.body?.lma) {
-                createObj.lma = JSON.parse(req.body.lma)
-            }
-
         } catch (error) {
             return res.status(400).json({ msg: "Invalid JSON data" });
 
         }
+
+        if (typeof req?.body?.isSeniorCitizen === 'boolean'){
+            createObj.isSeniorCitizen = req.body.isSeniorCitizen;
+        } 
 
         if (req.files?.photo[0]) {
             const file = req.files?.photo[0];
@@ -291,7 +295,7 @@ applicationCtrl.CreateCorporateApplication = async (req, res, next) => {
                 const { publicUrl, fileName } = await commonController.uploadFileToFirebase(file, process.env.MEMBER_FOLDER_PATH);
 
                 const photoIndex = photoKey.match(/\d+/)[0];
-                const meetRepIndex = createObj?.meetReps?.findIndex((item) => item._id == photoIndex);
+                const meetRepIndex = createObj?.meetReps?.findIndex((item) => item.rid == photoIndex);
 
                 if (meetRepIndex !== -1) {
                     createObj.meetReps[meetRepIndex].photo = {
@@ -353,7 +357,7 @@ applicationCtrl.CreateAssociateCorporateApplication = async (req, res, next) => 
                 const { publicUrl, fileName } = await commonController.uploadFileToFirebase(file, process.env.MEMBER_FOLDER_PATH);
 
                 const photoIndex = photoKey.match(/\d+/)[0];
-                const meetRepIndex = createObj?.meetReps?.findIndex((item) => item._id == photoIndex);
+                const meetRepIndex = createObj?.meetReps?.findIndex((item) => item.rid == photoIndex);
 
                 if (meetRepIndex !== -1) {
                     createObj.meetReps[meetRepIndex].photo = {
@@ -379,22 +383,22 @@ applicationCtrl.UpdateMembershipStatus = async (req, res) => {
         const Id = req.params.id;
         if (!isValidObjectId(Id)) return res.status(400).json({ msg: 'Invalid Id' })
 
-        const { status, memberType } = req.body;
+        const { status, applicationType } = req.body;
 
         let application;
-        if (memberType === "individual") {
+        if (applicationType === "individual") {
             application = await IndlAppln.findByIdAndUpdate(Id, {
                 $set: { status }
             }, { new: true }).lean()
 
         }
-        else if (memberType === "corporate") {
+        else if (applicationType === "corporate") {
             application = await CorpAppln.findByIdAndUpdate(Id, {
                 $set: { status }
             }, { new: true }).lean()
 
         }
-        else if (memberType === "associate") {
+        else if (applicationType === "associate") {
             application = await AscCorpAppln.findByIdAndUpdate(Id, {
                 $set: { status }
             }, { new: true }).lean()
@@ -405,7 +409,7 @@ applicationCtrl.UpdateMembershipStatus = async (req, res) => {
             return res.status(500).json({ msg: 'Failed to update Membership status' });
         }
 
-        const memberExistsForApln = await Member.findOne({ applicationId: application?._id, memberType: memberType })
+        const memberExistsForApln = await Member.findOne({ applicationId: application?._id, memberType: applicationType })
 
         if (memberExistsForApln) { return res.status(409).json({ msg: 'Member already exist' }) }
 
@@ -413,7 +417,7 @@ applicationCtrl.UpdateMembershipStatus = async (req, res) => {
             const { _id, email, mobile } = application;
 
             const memberObj = { email, mobile }
-            memberObj.memberType = memberType;
+            memberObj.memberType = applicationType;
             memberObj.applicationId = _id;
 
             // adding membership expiry date which is 1 year from now
@@ -453,14 +457,21 @@ applicationCtrl.UpdateIndividualApplication = async (req, res) => {
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         const mobileRegex = /^[6-9]\d{9}$/;
 
-        const { email, mobile, isSeniorCitizen, qualifications, trainings, experiences, references, lma, ...updateObj } = req.body;
+        const { email, mobile, qualifications, trainings, experiences,
+            references, lmaName, lmaMembershipNum, ...updateObj } = req.body;
+        
+        console.log({request: req.body})
 
         if (email && emailRegex.test(email)) updateObj.email = email;
         if (mobile && mobileRegex.test(mobile)) updateObj.mobile = mobile;
-        if (typeof isSeniorCitizen === 'boolean') updateObj.isSeniorCitizen = isSeniorCitizen;
+
+        if (typeof req?.body?.isSeniorCitizen === 'boolean'){
+            console.log("senior", req.body.isSeniorCitizen)
+            updateObj.isSeniorCitizen = req.body.isSeniorCitizen;
+        } 
 
         try {
-            ['qualifications', 'trainings', 'experiences', 'references', 'lma'].forEach((field) => {
+            ['qualifications', 'trainings', 'experiences', 'references'].forEach((field) => {
                 if (req.body[field]) {
                     updateObj[field] = JSON.parse(req.body[field]);
                 }
@@ -531,7 +542,7 @@ applicationCtrl.UpdateCorporateApplication = async (req, res) => {
 
             await Promise.all(photoKeys.map(async (photoKey) => {
                 const photoIndex = photoKey.match(/\d+/)[0];
-                const meetRep = allMeetReps.find(item => item._id == photoIndex);
+                const meetRep = allMeetReps.find(item => item.rid == photoIndex);
                 const uploadFile = req.files[photoKey][0];
 
                 // Delete old photo if exists
@@ -542,8 +553,8 @@ applicationCtrl.UpdateCorporateApplication = async (req, res) => {
                 // Upload new photo
                 const { publicUrl, fileName } = await commonController.uploadFileToFirebase(uploadFile, process.env.MEMBER_FOLDER_PATH);
                 if (publicUrl && fileName) {
-                    allMeetReps = allMeetReps.map(item => 
-                        item._id == photoIndex ? { ...item, photo: { name: fileName, location: publicUrl } } : item
+                    allMeetReps = allMeetReps.map(item =>
+                        item.rid == photoIndex ? { ...item, photo: { name: fileName, location: publicUrl } } : item
                     );
                 }
             }));
@@ -598,7 +609,7 @@ applicationCtrl.UpdateAssociateCorporateApplication = async (req, res) => {
 
             await Promise.all(photoKeys.map(async (photoKey) => {
                 const photoIndex = photoKey.match(/\d+/)[0];
-                const meetRep = allMeetReps.find(item => item._id == photoIndex);
+                const meetRep = allMeetReps.find(item => item.rid == photoIndex);
                 const uploadFile = req.files[photoKey][0];
 
                 // Delete old photo if exists
@@ -609,8 +620,8 @@ applicationCtrl.UpdateAssociateCorporateApplication = async (req, res) => {
                 // Upload new photo
                 const { publicUrl, fileName } = await commonController.uploadFileToFirebase(uploadFile, process.env.MEMBER_FOLDER_PATH);
                 if (publicUrl && fileName) {
-                    allMeetReps = allMeetReps.map(item => 
-                        item._id == photoIndex ? { ...item, photo: { name: fileName, location: publicUrl } } : item
+                    allMeetReps = allMeetReps.map(item =>
+                        item.rid == photoIndex ? { ...item, photo: { name: fileName, location: publicUrl } } : item
                     );
                 }
             }));

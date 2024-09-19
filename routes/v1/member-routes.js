@@ -40,7 +40,7 @@ memberRouter.post('/associate',
     memberCtrl.createAssociateMemberByAdmin);
 
 
-memberRouter.put('/individual',
+memberRouter.put('/individual/:id',
     upload.fields([
         { name: 'photo', maxCount: 1 },
         { name: 'ageProof', maxCount: 1 },
@@ -49,7 +49,7 @@ memberRouter.put('/individual',
     ]),
     memberCtrl.updateIndividualMember);
 
-memberRouter.put('/corporate',
+memberRouter.put('/corporate/:id',
     upload.fields([
         { name: 'photo1', maxCount: 1 },
         { name: 'photo2', maxCount: 1 },
@@ -58,7 +58,7 @@ memberRouter.put('/corporate',
     ]),
     memberCtrl.updateCorporateMember);
 
-memberRouter.put('/associate',
+memberRouter.put('/associate/:id',
     upload.fields([
         { name: 'photo1', maxCount: 1 },
         { name: 'photo2', maxCount: 1 },

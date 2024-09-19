@@ -2,7 +2,7 @@ import mongoose from "mongoose";
 
 // * Define the schema for the gallery collection
 const gallerySchema = new mongoose.Schema({
-    name: {
+    eventName: {
         type: String,
         required: true
     },

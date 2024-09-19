@@ -21,10 +21,11 @@ hallEnquiriesController.saveHallEnquiryToDB = async (hall, name, email, phoneNo)
     const collection = mongoose.connection.collection(process.env.HALL_ENQUIRIES_COLLECTION_NAME);
 
     const metadata = new HallEnquiry({
-        hall:hall,
+        hall: hall,
         name: name,
         email: email,
-        phoneNo: phoneNo
+        phoneNo: phoneNo,
+
     });
 
     await collection.insertOne(metadata);
@@ -40,7 +41,7 @@ hallEnquiriesController.createHallEnquiry = async (req, res) => {
 
         // Validate Email using regex
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (!emailRegex.test(email)) return res.status(400).json({ msg: "Invalid Email format" });    
+        if (!emailRegex.test(email)) return res.status(400).json({ msg: "Invalid Email format" });
 
         await hallEnquiriesController.saveHallEnquiryToDB(hall, name, email, phoneNo);
 
@@ -51,15 +52,50 @@ hallEnquiriesController.createHallEnquiry = async (req, res) => {
     }
 }
 
+hallEnquiriesController.updateHallEnquiry = async (req, res) => {
+    try {
+        const Id = req.params.id
+        if(!isValidObjectId(Id)){ return res.status(400).json({ message: 'Invalid Id' }); }
+
+        const { status, remark } = req.body;
+        const updateObj = {}
+
+        if(remark?.trim()){
+            updateObj.remark = remark
+        }
+
+        const statusArray = ['enquiry', 'followup', 'in review', 'confirmed', 'rejected']
+        if(status && statusArray?.includes(status)){
+            updateObj.status = status
+        }
+
+        const updatedEnq = await HallEnquiry.findByIdAndUpdate(Id, { $set: updateObj }, {new:true})
+
+        if(!updatedEnq){
+            return res.status(409).json({ message: 'Failed to update' });
+        }
+
+        return res.status(200).json({ message: 'Hall enquiry added successfully' });
+
+    } catch (error) {
+        console.log(error);
+        res.status(500).json({ message: 'Internal server error' });
+    }
+}
+
 // * Function to get all hall enquiries
 hallEnquiriesController.getAllHallEnquiries = async (req, res) => {
     try {
 
         const filters = {}
 
-        const { date } = req.query
+        const { date, status } = req.query
         const searchQuery = req.query.search;
         if (searchQuery) { filters.name = { $regex: new RegExp(searchQuery, "i") } }
+
+        if (status) {
+            filters.status = status;
+        }
 
         if (date) {
             const parsedDate = dayjs(date, 'DD-MM-YYYY');
@@ -77,7 +113,7 @@ hallEnquiriesController.getAllHallEnquiries = async (req, res) => {
 
         const hallEnquiries = await HallEnquiry.find(filters).sort({ createdAt: -1 });
 
-        return res.status(200).json({ hallEnquiries : hallEnquiries });
+        return res.status(200).json({ hallEnquiries: hallEnquiries });
     } catch (error) {
         console.log(error);
         return res.status(500).json({ message: 'Internal server error' });

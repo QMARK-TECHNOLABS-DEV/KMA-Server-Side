@@ -9,14 +9,15 @@ const hallEnquiriesRouter = express.Router();
 // * Defining the routes for hall-enquiries
 
 // * Routes for client side (unprotected routes)
-hallEnquiriesRouter.get('', hallEnquiriesController.getAllHallEnquiries);
-hallEnquiriesRouter.get('/:hallEnquiryId', hallEnquiriesController.getHallEnquiryById);
+hallEnquiriesRouter.post('', hallEnquiriesController.createHallEnquiry);
 
 // * Middleware to check the authentication
 hallEnquiriesRouter.use(authMiddleware)
+hallEnquiriesRouter.get('', hallEnquiriesController.getAllHallEnquiries);
+hallEnquiriesRouter.get('/:hallEnquiryId', hallEnquiriesController.getHallEnquiryById);
+hallEnquiriesRouter.put('/:id', hallEnquiriesController.updateHallEnquiry);
 
 // * Routes for Admin Dashboard (protected routes)
-hallEnquiriesRouter.post('', hallEnquiriesController.createHallEnquiry);
 hallEnquiriesRouter.delete('/:hallEnquiryId', hallEnquiriesController.deleteHallEnquiryById);
 
 // ? Export the hallEnquiriesRouter

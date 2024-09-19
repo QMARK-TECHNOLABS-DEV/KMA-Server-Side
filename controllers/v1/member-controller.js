@@ -23,20 +23,25 @@ memberCtrl.GetMember = async (req, res) => {
         const Id = req.params.id;
         if (!isValidObjectId(Id)) return res.status(409).json({ msg: "Invalid id" });
 
-        const member = await Member.findById(Id);
+        const member = await Member.findById(Id).lean();
 
         let application;
         if (member?.memberType === "individual") {
-            application = await IndlAppln.findById(member?.applicationId)
+            application = await IndlAppln.findById(member?.applicationId).lean()
         }
         else if (member?.memberType === "corporate") {
-            application = await CorpAppln.findById(member?.applicationId)
+            application = await CorpAppln.findById(member?.applicationId).lean()
         }
         else if (member?.memberType === "associate") {
-            application = await AscCorpAppln.findById(member?.applicationId)
+            application = await AscCorpAppln.findById(member?.applicationId).lean()
         }
 
-        res.status(200).json({ member, application })
+        const { _id, status, createdAt, updatedAt, __v, photo, ageProof,
+            degreeCertificate, bioData, ...restAppln } = application;
+
+        const { expiryDate, code } = member;
+
+        res.status(200).json({ member: { ...restAppln, expiryDate, code } })
     } catch (error) {
         console.log(error)
         res.status(500).json({ msg: 'Something went wrong' })
@@ -76,11 +81,11 @@ memberCtrl.GetManyMembers = async (req, res) => {
 
         if (searchQuery?.trim()) {
             if (memberType === "individual") {
-                filters.applicantName = { $regex: new RegExp(searchQuery?.trim(), "i") }
+                filters['application.applicantName'] = { $regex: new RegExp(searchQuery?.trim(), "i") }
 
             }
             else if (["corporate", "associate"]?.includes(memberType)) {
-                filters.orgName = { $regex: new RegExp(searchQuery?.trim(), "i") }
+                filters['application.orgName'] = { $regex: new RegExp(searchQuery?.trim(), "i") }
 
             }
         }
@@ -121,6 +126,11 @@ memberCtrl.GetManyMembers = async (req, res) => {
             },
             {
                 $match: { ...filters }
+            },
+            {
+                $sort:{
+                    createdAt: -1
+                }
             }
         ]);
 
@@ -181,9 +191,9 @@ memberCtrl.DeleteMember = async (req, res) => {
 memberCtrl.createIndividualMemberByAdmin = async (req, res) => {
     try {
         const {
-            applicantName, dob, isSeniorCitizen, orgName, gstNum,
+            applicantName, dob, orgName, gstNum,
             designation, residenceAddress, phone, mobile, email, officeAddress,
-            officePhone, membershipFor, nature,
+            officePhone, membershipFor, lmaName, lmaMembershipNum, nature,
             turnover, jobProfile,
             hasRenewalPay, payMode,
         } = req.body;
@@ -195,14 +205,14 @@ memberCtrl.createIndividualMemberByAdmin = async (req, res) => {
             return res.status(400).json({ msg: "Either email or mobile number should be present" })
         }
 
-        if (!(applicantName && membershipFor )) {
+        if (!(applicantName && membershipFor)) {
             return res.status(400).json({ msg: "Insufficient Data" })
         }
 
         const createObj = {
-            applicantName, dob, isSeniorCitizen, orgName, gstNum,
+            applicantName, dob, orgName, gstNum,
             designation, residenceAddress, phone, mobile, email, officeAddress,
-            officePhone, membershipFor, nature,
+            officePhone, membershipFor, lmaName, lmaMembershipNum, nature,
             turnover, jobProfile,
             hasRenewalPay, payMode,
         }
@@ -221,14 +231,14 @@ memberCtrl.createIndividualMemberByAdmin = async (req, res) => {
                 createObj.references = JSON.parse(req.body.references)
             }
 
-            if (req?.body?.lma) {
-                createObj.lma = JSON.parse(req.body.lma)
-            }
-
         } catch (error) {
             return res.status(400).json({ msg: "Invalid JSON data" });
 
         }
+
+        if (typeof req?.body?.isSeniorCitizen === 'boolean'){
+            createObj.isSeniorCitizen = req.body.isSeniorCitizen;
+        } 
 
         if (req?.files?.photo?.[0]) {
             const file = req?.files?.photo[0];
@@ -326,7 +336,7 @@ memberCtrl.createCorporateMemberByAdmin = async (req, res) => {
             return res.status(400).json({ msg: "Either email or mobile number should be present" })
         }
 
-        if (!(orgName && payMode)) {
+        if (!orgName) {
             return res.status(400).json({ msg: "Insufficient Data" });
         }
 
@@ -353,7 +363,7 @@ memberCtrl.createCorporateMemberByAdmin = async (req, res) => {
                 const { publicUrl, fileName } = await commonController.uploadFileToFirebase(file, process.env.MEMBER_FOLDER_PATH);
 
                 const photoIndex = photoKey.match(/\d+/)[0];
-                const meetRepIndex = createObj?.meetReps?.findIndex((item) => item._id == photoIndex);
+                const meetRepIndex = createObj?.meetReps?.findIndex((item) => item.rid == photoIndex);
 
                 if (meetRepIndex !== -1) {
                     createObj.meetReps[meetRepIndex].photo = {
@@ -410,7 +420,7 @@ memberCtrl.createAssociateMemberByAdmin = async (req, res) => {
             return res.status(400).json({ msg: "Either email or mobile number should be present" })
         }
 
-        if (!(orgName && payMode)) {
+        if (!orgName) {
             return res.status(400).json({ msg: "Insufficient Data" });
         }
 
@@ -436,7 +446,7 @@ memberCtrl.createAssociateMemberByAdmin = async (req, res) => {
                 const { publicUrl, fileName } = await commonController.uploadFileToFirebase(file, process.env.MEMBER_FOLDER_PATH);
 
                 const photoIndex = photoKey.match(/\d+/)[0];
-                const meetRepIndex = createObj?.meetReps?.findIndex((item) => item._id == photoIndex);
+                const meetRepIndex = createObj?.meetReps?.findIndex((item) => item.rid == photoIndex);
 
                 if (meetRepIndex !== -1) {
                     createObj.meetReps[meetRepIndex].photo = {
@@ -500,8 +510,10 @@ memberCtrl.updateIndividualMember = async (req, res) => {
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         const mobileRegex = /^[6-9]\d{9}$/;
 
-        const { email, mobile, isSeniorCitizen, qualifications, trainings,
-            experiences, references, lma, password, expiryDate, code, ...applnUpdateObj } = req.body;
+        const { email, mobile, expiryDate, code, qualifications, trainings,
+            experiences, references, ...applnUpdateObj } = req.body;
+
+        console.log({ applnUpdateObj })
 
         const memberObj = {};
 
@@ -514,17 +526,19 @@ memberCtrl.updateIndividualMember = async (req, res) => {
             memberObj.mobile = mobile;
         }
 
-        if (expiryDate?.trim()) {
+        if (new Date(expiryDate) >= new Date()) {
             memberObj.expiryDate = expiryDate
         }
         if (code?.trim()) {
             memberObj.code = code
         }
 
-        if (typeof isSeniorCitizen === 'boolean') applnUpdateObj.isSeniorCitizen = isSeniorCitizen;
+        if (typeof req?.body?.isSeniorCitizen === 'boolean'){
+            createObj.isSeniorCitizen = req.body.isSeniorCitizen;
+        } 
 
         try {
-            ['qualifications', 'trainings', 'experiences', 'references', 'lma'].forEach((field) => {
+            ['qualifications', 'trainings', 'experiences', 'references'].forEach((field) => {
                 if (req.body[field]) {
                     applnUpdateObj[field] = JSON.parse(req.body[field]);
                 }
@@ -548,7 +562,7 @@ memberCtrl.updateIndividualMember = async (req, res) => {
             }
         }
 
-        await IndlAppln.findByIdAndUpdate(Id, { $set: applnUpdateObj }, { new: true });
+        await IndlAppln.findByIdAndUpdate(theIndlAppln?._id, { $set: applnUpdateObj }, { new: true });
 
         const member = await Member.findByIdAndUpdate(Id, { $set: memberObj }, { new: true });
         if (!member) {
@@ -599,7 +613,7 @@ memberCtrl.updateCorporateMember = async (req, res) => {
             memberObj.mobile = mobile;
         }
 
-        if (expiryDate?.trim()) {
+        if (new Date(expiryDate) >= new Date()) {
             memberObj.expiryDate = expiryDate
         }
         if (code?.trim()) {
@@ -620,7 +634,7 @@ memberCtrl.updateCorporateMember = async (req, res) => {
 
             await Promise.all(photoKeys.map(async (photoKey) => {
                 const photoIndex = photoKey.match(/\d+/)[0];
-                const meetRep = allMeetReps.find(item => item._id == photoIndex);
+                const meetRep = allMeetReps.find(item => item.rid == photoIndex);
                 const uploadFile = req?.files[photoKey][0];
 
                 // Delete old photo if exists
@@ -632,7 +646,7 @@ memberCtrl.updateCorporateMember = async (req, res) => {
                 const { publicUrl, fileName } = await commonController.uploadFileToFirebase(uploadFile, process.env.MEMBER_FOLDER_PATH);
                 if (publicUrl && fileName) {
                     allMeetReps = allMeetReps.map(item =>
-                        item._id == photoIndex ? { ...item, photo: { name: fileName, location: publicUrl } } : item
+                        item.rid == photoIndex ? { ...item, photo: { name: fileName, location: publicUrl } } : item
                     );
                 }
             }));
@@ -641,7 +655,7 @@ memberCtrl.updateCorporateMember = async (req, res) => {
         }
 
 
-        await CorpAppln.findByIdAndUpdate(Id, { $set: applnUpdateObj }, { new: true });
+        await CorpAppln.findByIdAndUpdate(theCorpAppln?._id, { $set: applnUpdateObj }, { new: true });
 
         const member = await Member.findByIdAndUpdate(Id, { $set: memberObj }, { new: true });
         if (!member) {
@@ -692,9 +706,10 @@ memberCtrl.updateAssociateMember = async (req, res) => {
             memberObj.mobile = mobile;
         }
 
-        if (expiryDate?.trim()) {
+        if (new Date(expiryDate) >= new Date()) {
             memberObj.expiryDate = expiryDate
         }
+
         if (code?.trim()) {
             memberObj.code = code
         }
@@ -713,7 +728,7 @@ memberCtrl.updateAssociateMember = async (req, res) => {
 
             await Promise.all(photoKeys.map(async (photoKey) => {
                 const photoIndex = photoKey.match(/\d+/)[0];
-                const meetRep = allMeetReps.find(item => item._id == photoIndex);
+                const meetRep = allMeetReps.find(item => item.rid == photoIndex);
                 const uploadFile = req?.files[photoKey][0];
 
                 // Delete old photo if exists
@@ -725,7 +740,7 @@ memberCtrl.updateAssociateMember = async (req, res) => {
                 const { publicUrl, fileName } = await commonController.uploadFileToFirebase(uploadFile, process.env.MEMBER_FOLDER_PATH);
                 if (publicUrl && fileName) {
                     allMeetReps = allMeetReps.map(item =>
-                        item._id == photoIndex ? { ...item, photo: { name: fileName, location: publicUrl } } : item
+                        item.rid == photoIndex ? { ...item, photo: { name: fileName, location: publicUrl } } : item
                     );
                 }
             }));
@@ -734,7 +749,7 @@ memberCtrl.updateAssociateMember = async (req, res) => {
         }
 
 
-        await AscCorpAppln.findByIdAndUpdate(Id, { $set: applnUpdateObj }, { new: true });
+        await AscCorpAppln.findByIdAndUpdate(theAscCorpAppln?._id, { $set: applnUpdateObj }, { new: true });
 
         const member = await Member.findByIdAndUpdate(Id, { $set: memberObj }, { new: true });
         if (!member) {
