@@ -17,16 +17,15 @@ dayjs.extend(timezone);
 dayjs.tz.setDefault('Asia/Kolkata');
 
 // * Function to save hall enquiry to MongoDB
-hallEnquiriesController.saveHallEnquiryToDB = async (hall, name, email, phoneNo, status, remark) => {
+hallEnquiriesController.saveHallEnquiryToDB = async (hall, name, email, phoneNo) => {
     const collection = mongoose.connection.collection(process.env.HALL_ENQUIRIES_COLLECTION_NAME);
 
     const metadata = new HallEnquiry({
-        hall:hall,
+        hall: hall,
         name: name,
         email: email,
         phoneNo: phoneNo,
-        status : status,
-        remark: remark,
+
     });
 
     await collection.insertOne(metadata);
@@ -39,19 +38,48 @@ hallEnquiriesController.createHallEnquiry = async (req, res) => {
         const name = req.body.name;
         const email = req.body.email;
         const phoneNo = req.body.phoneNo;
-        const status = req.body.status;
-        const remark = req.body.remark;
 
         // Validate Email using regex
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (!emailRegex.test(email)) return res.status(400).json({ msg: "Invalid Email format" });    
+        if (!emailRegex.test(email)) return res.status(400).json({ msg: "Invalid Email format" });
 
-        await hallEnquiriesController.saveHallEnquiryToDB(hall, name, email, phoneNo, status, remark);
+        await hallEnquiriesController.saveHallEnquiryToDB(hall, name, email, phoneNo);
 
         return res.status(201).json({ message: 'Hall enquiry added successfully' });
     } catch (error) {
         console.log(error);
         return res.status(500).json({ message: 'Internal server error' });
+    }
+}
+
+hallEnquiriesController.updateHallEnquiry = async (req, res) => {
+    try {
+        const Id = req.params.id
+        if(!isValidObjectId(Id)){ return res.status(400).json({ message: 'Invalid Id' }); }
+
+        const { status, remark } = req.body;
+        const updateObj = {}
+
+        if(remark?.trim()){
+            updateObj.remark = remark
+        }
+
+        const statusArray = ['enquiry', 'followup', 'in review', 'confirmed', 'rejected']
+        if(status && statusArray?.includes(status)){
+            updateObj.status = status
+        }
+
+        const updatedEnq = await HallEnquiry.findByIdAndUpdate(Id, { $set: updateObj }, {new:true})
+
+        if(!updatedEnq){
+            return res.status(409).json({ message: 'Failed to update' });
+        }
+
+        return res.status(201).json({ message: 'Hall enquiry added successfully' });
+
+    } catch (error) {
+        console.log(error);
+        res.status(500).json({ message: 'Internal server error' });
     }
 }
 
@@ -65,7 +93,7 @@ hallEnquiriesController.getAllHallEnquiries = async (req, res) => {
         const searchQuery = req.query.search;
         if (searchQuery) { filters.name = { $regex: new RegExp(searchQuery, "i") } }
 
-        if(status){
+        if (status) {
             filters.status = status;
         }
 
@@ -85,7 +113,7 @@ hallEnquiriesController.getAllHallEnquiries = async (req, res) => {
 
         const hallEnquiries = await HallEnquiry.find(filters).sort({ createdAt: -1 });
 
-        return res.status(200).json({ hallEnquiries : hallEnquiries });
+        return res.status(200).json({ hallEnquiries: hallEnquiries });
     } catch (error) {
         console.log(error);
         return res.status(500).json({ message: 'Internal server error' });

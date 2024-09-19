@@ -209,7 +209,7 @@ eventsController.registerEvent = async (req, res) => {
         const haveEvent = await Event.findById(event)
         if (!haveEvent) { return res.status(400).json({ msg: "Event not found" }) }
 
-        if (!(event || name || phone || email || organization)) {
+        if (!(phone || email)) {
             return res.status(400).json({ msg: "Insufficient Data" })
         }
 
