@@ -242,11 +242,30 @@ eventsController.getAnEventRegistration = async (req, res) => {
 
 eventsController.getManyEventRegistrations = async (req, res) => {
     try {
+        const filters = {}
+
+        const { date } = req.query
+        const searchQuery = req.query.search;
+        if (searchQuery) { filters.name = { $regex: new RegExp(searchQuery, "i") } }
+
+        if (date) {
+            const parsedDate = dayjs(date, 'DD-MM-YYYY');
+
+            const startOfDay = parsedDate.startOf('day').toISOString();
+            const endOfDay = parsedDate.endOf('day').toISOString();
+
+            filters.createdAt = {
+                $gte: startOfDay,
+                $lt: endOfDay
+            }
+
+        }
+
         // Paginators
         const page = req.query.page;
         const entries = req.query.entries;
 
-        const registrations = await EventRegister.find()
+        const registrations = await EventRegister.find(filters)
             .populate('event', '_id title date')
             .sort({ createdAt: -1 })
 
