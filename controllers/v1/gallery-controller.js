@@ -18,11 +18,11 @@ dayjs.extend(timezone);
 dayjs.tz.setDefault('Asia/Kolkata');
 
 // * Function to save gallery to MongoDB
-galleryController.saveGalleryToDB = async (eventName, fileUrl, fileName) => {
+galleryController.saveGalleryToDB = async (event, fileUrl, fileName) => {
     const collection = mongoose.connection.collection(process.env.GALLERY_COLLECTION_NAME);
 
     const metadata = new Gallery({
-        eventName: eventName,
+        event: event,
         fileUrl: fileUrl,
         fileName: fileName
     });
@@ -33,10 +33,12 @@ galleryController.saveGalleryToDB = async (eventName, fileUrl, fileName) => {
 // * Function to add file in gallery
 galleryController.createGallery = async (req, res) => {
     try {
-        const eventName = req.body.eventName;
+        const event = req.body.event;
         const files = req.files;
 
-        if (!(eventName?.trim() && files.length)) {
+        if (!isValidObjectId(event)) { return res.status(400).json({ msg: "Invalid Id" }) }
+
+        if (!files.length) {
             return res.status(400).json({ message: 'Insufficient data' });
         }
 
@@ -45,7 +47,7 @@ galleryController.createGallery = async (req, res) => {
         for (const { publicUrl: fileUrl, fileName } of uploadedFiles) {
             console.log(`File uploaded: ${fileName}, URL: ${fileUrl}`);
 
-            await galleryController.saveGalleryToDB(eventName, fileUrl, fileName);
+            await galleryController.saveGalleryToDB(event, fileUrl, fileName);
         }
 
         return res.status(201).json({ message: 'File uploaded to gallery successfully' });
@@ -60,10 +62,10 @@ galleryController.getAllGallery = async (req, res) => {
     try {
         const filters = {}
 
-        const { date, eventName } = req.query
+        const { date, event } = req.query
 
-        if(eventName?.trim()){
-            filters.eventName = eventName;
+        if(event && isValidObjectId(event)){
+            filters.event = event;
         }
 
         if (date) {
@@ -83,7 +85,8 @@ galleryController.getAllGallery = async (req, res) => {
 
         // const collection = mongoose.connection.collection(process.env.GALLERY_COLLECTION_NAME);
 
-        const gallery = await Gallery.find(filters).sort({ createdAt: -1 });
+        const gallery = await Gallery.find(filters).sort({ createdAt: -1 })
+        .populate('event', '_id title')
 
         return res.status(200).json({ gallery: gallery });
     } catch (error) {
@@ -148,7 +151,7 @@ galleryController.deleteGalleryById = async (req, res) => {
 galleryController.updateGalleryById = async (req, res) => {
     try {
         const id = req.params.galleryId;
-        const eventName = req.body.eventName;
+        const event = req.body.event;
         const file = req.file;
 
         if (!isValidObjectId(id)) {
@@ -168,9 +171,9 @@ galleryController.updateGalleryById = async (req, res) => {
 
             const { publicUrl: fileUrl, fileName } = await commonController.uploadFileToFirebase(file, process.env.GALLERY_FOLDER_PATH);
 
-            await collection.updateOne({ _id: new ObjectId(id) }, { $set: { eventName: eventName, fileUrl: fileUrl, fileName: fileName } });
+            await collection.updateOne({ _id: new ObjectId(id) }, { $set: { event: event, fileUrl: fileUrl, fileName: fileName } });
         } else {
-            await collection.updateOne({ _id: new ObjectId(id) }, { $set: { eventName: eventName } });
+            await collection.updateOne({ _id: new ObjectId(id) }, { $set: { event: event } });
         }
 
         return res.status(200).json({ message: 'Gallery updated successfully' });

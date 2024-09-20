@@ -195,7 +195,7 @@ memberCtrl.createIndividualMemberByAdmin = async (req, res) => {
             designation, residenceAddress, phone, mobile, email, officeAddress,
             officePhone, membershipFor, lmaName, lmaMembershipNum, nature,
             turnover, jobProfile,
-            hasRenewalPay, payMode,
+            hasRenewalPay, payMode, code
         } = req.body;
 
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -214,7 +214,7 @@ memberCtrl.createIndividualMemberByAdmin = async (req, res) => {
             designation, residenceAddress, phone, mobile, email, officeAddress,
             officePhone, membershipFor, lmaName, lmaMembershipNum, nature,
             turnover, jobProfile,
-            hasRenewalPay, payMode,
+            hasRenewalPay, payMode, status : 'approved'
         }
 
         try {
@@ -296,7 +296,7 @@ memberCtrl.createIndividualMemberByAdmin = async (req, res) => {
         }
 
 
-        const memberObj = { email, mobile }
+        const memberObj = { email, mobile , code}
         memberObj.memberType = "individual";
         memberObj.applicationId = application?._id;
 
@@ -326,7 +326,7 @@ memberCtrl.createCorporateMemberByAdmin = async (req, res) => {
         const {
             orgName, gstNum, postalAddress, commnAddress, phone, mobile, fax, email,
             nature, turnover, executives, supervisors, workers, capitalEmployed,
-            paidupCapital, commnMode, hasRenewalPay, payMode,
+            paidupCapital, commnMode, hasRenewalPay, payMode, code
         } = req.body;
 
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -343,7 +343,7 @@ memberCtrl.createCorporateMemberByAdmin = async (req, res) => {
         const createObj = {
             orgName, gstNum, postalAddress, commnAddress, phone, mobile, fax, email,
             nature, turnover, executives, supervisors, workers, capitalEmployed,
-            paidupCapital, commnMode, hasRenewalPay, payMode,
+            paidupCapital, commnMode, hasRenewalPay, payMode, status : 'approved'
         };
 
         try {
@@ -381,7 +381,7 @@ memberCtrl.createCorporateMemberByAdmin = async (req, res) => {
             return res.status(400).json({ msg: 'Failed to create application' });
         }
 
-        const memberObj = { email, mobile }
+        const memberObj = { email, mobile, code }
         memberObj.memberType = "corporate";
         memberObj.applicationId = application?._id;
 
@@ -410,7 +410,7 @@ memberCtrl.createAssociateMemberByAdmin = async (req, res) => {
         const {
             orgName, gstNum, postalAddress, commnAddress, phone, mobile, fax, email,
             nature, turnover, executives, supervisors, workers, capitalEmployed,
-            paidupCapital, commnMode, hasRenewalPay, payMode,
+            paidupCapital, commnMode, hasRenewalPay, payMode, code
         } = req.body;
 
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -427,7 +427,7 @@ memberCtrl.createAssociateMemberByAdmin = async (req, res) => {
         const createObj = {
             orgName, gstNum, postalAddress, commnAddress, phone, mobile, fax, email,
             nature, turnover, executives, supervisors, workers, capitalEmployed,
-            paidupCapital, commnMode, hasRenewalPay, payMode,
+            paidupCapital, commnMode, hasRenewalPay, payMode, status : 'approved'
         };
 
         try {
@@ -464,7 +464,7 @@ memberCtrl.createAssociateMemberByAdmin = async (req, res) => {
             return res.status(400).json({ msg: 'Failed to create application' });
         }
 
-        const memberObj = { email, mobile }
+        const memberObj = { email, mobile, code }
         memberObj.memberType = "associate";
         memberObj.applicationId = application?._id;
 
