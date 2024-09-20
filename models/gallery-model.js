@@ -2,10 +2,12 @@ import mongoose from "mongoose";
 
 // * Define the schema for the gallery collection
 const gallerySchema = new mongoose.Schema({
-    eventName: {
-        type: String,
+    event: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "events",
         required: true
     },
+    
     fileUrl: {
         type: String,
         required: true
