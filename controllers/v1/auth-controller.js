@@ -309,6 +309,7 @@ authController.verifyOTPMemberLogin = async (req, res) => {
         const refreshToken = generateRefreshToken({ userId: user._id, role: user.role })
 
         const userInfo = {
+            _id: user?._id,
             memberType: user?.memberType,
             email: user?.email,
             mobile: user?.mobile,
