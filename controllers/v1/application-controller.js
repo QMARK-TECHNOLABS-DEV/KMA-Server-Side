@@ -164,7 +164,7 @@ applicationCtrl.CreateIndividualApplication = async (req, res, next) => {
         }
 
         const createObj = {
-            applicantName, dob, isSeniorCitizen, orgName, gstNum,
+            applicantName, dob, orgName, gstNum,
             designation, residenceAddress, phone, mobile, email, officeAddress,
             officePhone, membershipFor, lmaName, lmaMembershipNum, nature,
             turnover, jobProfile,
@@ -194,7 +194,7 @@ applicationCtrl.CreateIndividualApplication = async (req, res, next) => {
             createObj.isSeniorCitizen = req.body.isSeniorCitizen;
         } 
 
-        if (req.files?.photo[0]) {
+        if (req.files?.photo?.[0]) {
             const file = req.files?.photo[0];
 
             const { publicUrl, fileName } = await commonController.uploadFileToFirebase(file, process.env.MEMBER_FOLDER_PATH);
@@ -205,8 +205,8 @@ applicationCtrl.CreateIndividualApplication = async (req, res, next) => {
             }
         }
 
-        if (req.files?.ageProof[0]) {
-            const file = req.files?.ageProof[0];
+        if (req.files?.ageProof?.[0]) {
+            const file = req.files?.ageProof?.[0];
 
 
             const { publicUrl, fileName } = await commonController.uploadFileToFirebase(file, process.env.MEMBER_FOLDER_PATH);
@@ -217,8 +217,8 @@ applicationCtrl.CreateIndividualApplication = async (req, res, next) => {
             }
         }
 
-        if (req.files?.degreeCertificate[0]) {
-            const file = req.files?.degreeCertificate[0];
+        if (req.files?.degreeCertificate?.[0]) {
+            const file = req.files?.degreeCertificate?.[0];
 
 
             const { publicUrl, fileName } = await commonController.uploadFileToFirebase(file, process.env.MEMBER_FOLDER_PATH);
@@ -229,8 +229,8 @@ applicationCtrl.CreateIndividualApplication = async (req, res, next) => {
             }
         }
 
-        if (req.files?.bioData[0]) {
-            const file = req.files?.bioData[0];
+        if (req.files?.bioData?.[0]) {
+            const file = req.files?.bioData?.[0];
 
 
             const { publicUrl, fileName } = await commonController.uploadFileToFirebase(file, process.env.MEMBER_FOLDER_PATH);
