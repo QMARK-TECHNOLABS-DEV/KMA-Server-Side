@@ -3,13 +3,18 @@ import express from "express"
 const memberRouter = express.Router();
 import { authMiddleware } from "../../middlewares/auth-middleware.js";
 import multer from "multer";
+import { adminChecker } from "../../middlewares/adminChecker.js";
 
 const upload = multer();
 
+memberRouter.use(authMiddleware)
+
+memberRouter.get('/profile/:id', memberCtrl.GetProfile)
+
+memberRouter.use(adminChecker)
+
 memberRouter.get('/:id', memberCtrl.GetMember)
 memberRouter.get('', memberCtrl.GetManyMembers)
-
-memberRouter.use(authMiddleware)
 
 memberRouter.patch('/:id', memberCtrl.ChangeMemberActiveStatus)
 memberRouter.delete('/:id', memberCtrl.DeleteMember)

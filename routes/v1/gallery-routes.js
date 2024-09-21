@@ -3,6 +3,7 @@ import 'dotenv/config';
 import multer from 'multer';
 import { galleryController } from '../../controllers/v1/gallery-controller.js';
 import { authMiddleware } from '../../middlewares/auth-middleware.js';
+import { adminChecker } from '../../middlewares/adminChecker.js';
 
 // * Multer configuration
 const upload = multer();
@@ -18,6 +19,7 @@ galleryRouter.get('/:galleryId', galleryController.getGalleryById);
 
 // * Middleware to check the authentication
 galleryRouter.use(authMiddleware);
+galleryRouter.use(adminChecker);
 
 // * Routes for Admin Dashboard (protected routes)
 galleryRouter.post('', upload.array('files'), galleryController.createGallery);
