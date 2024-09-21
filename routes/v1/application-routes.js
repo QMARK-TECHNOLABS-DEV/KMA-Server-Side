@@ -4,6 +4,7 @@ import { authMiddleware } from "../../middlewares/auth-middleware.js";
 
 const applicationRouter = express.Router();
 import multer from "multer";
+import { adminChecker } from "../../middlewares/adminChecker.js";
 
 const upload = multer();
 
@@ -33,6 +34,7 @@ applicationRouter.post('/associate',
     applicationCtrl.CreateAssociateCorporateApplication);
 
 applicationRouter.use(authMiddleware)
+applicationRouter.use(adminChecker)
 
 applicationRouter.get('', applicationCtrl.GetAllApplications)
 applicationRouter.get('/count', applicationCtrl.applicationCount)

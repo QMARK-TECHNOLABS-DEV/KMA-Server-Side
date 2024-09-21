@@ -3,6 +3,7 @@ import 'dotenv/config';
 import { socialConnectController } from '../../controllers/v1/social-connect-controller.js';
 import { authMiddleware } from '../../middlewares/auth-middleware.js';
 import multer from 'multer';
+import { adminChecker } from '../../middlewares/adminChecker.js';
 
 // * Create a router for social-connect APIs
 const socialConnectRouter = express.Router();
@@ -20,6 +21,7 @@ socialConnectRouter.get('/:socialConnectId', socialConnectController.getSocialCo
 
 // * Middleware to check the authentication
 socialConnectRouter.use(authMiddleware);
+socialConnectRouter.use(adminChecker);
 
 // * Routes for Admin Dashboard (protected routes)
 

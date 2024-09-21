@@ -3,6 +3,7 @@ import 'dotenv/config';
 import multer from 'multer';
 import { bannerController } from '../../controllers/v1/banners-controller.js';
 import { authMiddleware } from '../../middlewares/auth-middleware.js';
+import { adminChecker } from '../../middlewares/adminChecker.js';
 
 // * Multer configuration
 const upload = multer();
@@ -18,6 +19,7 @@ bannerRouter.get('/:bannerId', bannerController.getBannerById);
 
 // * Middleware to check the authentication
 bannerRouter.use(authMiddleware);
+bannerRouter.use(adminChecker);
 
 // * Routes for Admin Dashboard (protected routes)
 bannerRouter.post('', upload.single('file'), bannerController.uploadBanner);

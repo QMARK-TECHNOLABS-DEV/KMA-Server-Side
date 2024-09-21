@@ -3,6 +3,7 @@ import 'dotenv/config';
 import { newsletterController } from '../../controllers/v1/newsletter-controller.js';
 import multer from 'multer';
 import { authMiddleware } from '../../middlewares/auth-middleware.js';
+import { adminChecker } from '../../middlewares/adminChecker.js';
 
 // * Multer configuration
 const upload = multer();
@@ -18,6 +19,7 @@ newsletterRouter.get('/:newsletterId', newsletterController.getNewsletterById);
 
 // * Middleware to check the authentication
 newsletterRouter.use(authMiddleware);
+newsletterRouter.use(adminChecker);
 
 // * Routes for Admin Dashboard (protected routes)
 newsletterRouter.post('', upload.fields([{ name: 'coverImage', maxCount: 1 }, { name: 'file', maxCount: 1 }]), newsletterController.uploadNewsletter);

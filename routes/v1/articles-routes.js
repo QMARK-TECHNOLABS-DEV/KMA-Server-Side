@@ -3,6 +3,7 @@ import 'dotenv/config';
 import { articlesController } from '../../controllers/v1/articles-controller.js';
 import { authMiddleware } from '../../middlewares/auth-middleware.js';
 import multer from 'multer';
+import { adminChecker } from '../../middlewares/adminChecker.js';
 
 // * Multer configuration
 const upload = multer();
@@ -18,6 +19,7 @@ articlesRouter.get('/:articleId', articlesController.getArticleById);
 
 // * Middleware to check the authentication
 articlesRouter.use(authMiddleware);
+articlesRouter.use(adminChecker);
 
 // * Routes for Admin Dashboard (protected routes)
 articlesRouter.post('', upload.single('coverImage'), articlesController.createArticle);

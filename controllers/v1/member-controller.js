@@ -128,7 +128,7 @@ memberCtrl.GetManyMembers = async (req, res) => {
                 $match: { ...filters }
             },
             {
-                $sort:{
+                $sort: {
                     createdAt: -1
                 }
             }
@@ -214,7 +214,7 @@ memberCtrl.createIndividualMemberByAdmin = async (req, res) => {
             designation, residenceAddress, phone, mobile, email, officeAddress,
             officePhone, membershipFor, lmaName, lmaMembershipNum, nature,
             turnover, jobProfile,
-            hasRenewalPay, payMode, status : 'approved'
+            hasRenewalPay, payMode, status: 'approved'
         }
 
         try {
@@ -236,9 +236,9 @@ memberCtrl.createIndividualMemberByAdmin = async (req, res) => {
 
         }
 
-        if (typeof req?.body?.isSeniorCitizen === 'boolean'){
+        if (typeof req?.body?.isSeniorCitizen === 'boolean') {
             createObj.isSeniorCitizen = req.body.isSeniorCitizen;
-        } 
+        }
 
         if (req?.files?.photo?.[0]) {
             const file = req?.files?.photo[0];
@@ -296,7 +296,7 @@ memberCtrl.createIndividualMemberByAdmin = async (req, res) => {
         }
 
 
-        const memberObj = { email, mobile , code}
+        const memberObj = { email, mobile, code }
         memberObj.memberType = "individual";
         memberObj.applicationId = application?._id;
 
@@ -343,7 +343,7 @@ memberCtrl.createCorporateMemberByAdmin = async (req, res) => {
         const createObj = {
             orgName, gstNum, postalAddress, commnAddress, phone, mobile, fax, email,
             nature, turnover, executives, supervisors, workers, capitalEmployed,
-            paidupCapital, commnMode, hasRenewalPay, payMode, status : 'approved'
+            paidupCapital, commnMode, hasRenewalPay, payMode, status: 'approved'
         };
 
         try {
@@ -427,7 +427,7 @@ memberCtrl.createAssociateMemberByAdmin = async (req, res) => {
         const createObj = {
             orgName, gstNum, postalAddress, commnAddress, phone, mobile, fax, email,
             nature, turnover, executives, supervisors, workers, capitalEmployed,
-            paidupCapital, commnMode, hasRenewalPay, payMode, status : 'approved'
+            paidupCapital, commnMode, hasRenewalPay, payMode, status: 'approved'
         };
 
         try {
@@ -533,9 +533,9 @@ memberCtrl.updateIndividualMember = async (req, res) => {
             memberObj.code = code
         }
 
-        if (typeof req?.body?.isSeniorCitizen === 'boolean'){
+        if (typeof req?.body?.isSeniorCitizen === 'boolean') {
             createObj.isSeniorCitizen = req.body.isSeniorCitizen;
-        } 
+        }
 
         try {
             ['qualifications', 'trainings', 'experiences', 'references'].forEach((field) => {
@@ -759,6 +759,45 @@ memberCtrl.updateAssociateMember = async (req, res) => {
         console.log(member);
         res.status(200).json({ msg: 'Member Updated', member });
 
+    } catch (error) {
+        console.log(error)
+        res.status(500).json({ msg: 'Something went wrong' })
+    }
+}
+
+
+memberCtrl.GetProfile = async (req, res) => {
+    try {
+        const Id = req.params.id;
+        if (!isValidObjectId(Id)) return res.status(409).json({ msg: "Invalid id" });
+
+        // To grant access only for admin and the Profile owner;
+        if (req?.user?.role !== 'admin') {
+            if (req?.user?.userId !== Id) {
+                return res.status(409).json({ msg: "Unauthorised Access" });
+            }
+        }
+
+        const member = await Member.findById(Id).lean();
+
+        let application;
+        if (member?.memberType === "individual") {
+            application = await IndlAppln.findById(member?.applicationId).lean()
+        }
+        else if (member?.memberType === "corporate") {
+            application = await CorpAppln.findById(member?.applicationId).lean()
+        }
+        else if (member?.memberType === "associate") {
+            application = await AscCorpAppln.findById(member?.applicationId).lean()
+        }
+
+        const { _id, status, createdAt, updatedAt, __v, ageProof,
+            degreeCertificate, bioData, applicationType, hasRenewalPay,
+            payMode, ...restAppln } = application;
+
+        const { memberType, expiryDate, code, role } = member;
+
+        res.status(200).json({ member: { ...restAppln, memberType, expiryDate, code, role, _id: member?._id } })
     } catch (error) {
         console.log(error)
         res.status(500).json({ msg: 'Something went wrong' })

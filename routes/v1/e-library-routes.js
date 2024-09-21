@@ -3,6 +3,7 @@ import 'dotenv/config';
 import { eLibraryController } from '../../controllers/v1/e-library-controller.js';
 import multer from 'multer';
 import { authMiddleware } from '../../middlewares/auth-middleware.js';
+import { adminChecker } from '../../middlewares/adminChecker.js';
 // * Multer configuration
 const upload = multer();
 
@@ -17,6 +18,7 @@ eLibraryRouter.get('/:documentId', eLibraryController.getDocumentById);
 
 // * Middleware to check the authentication
 eLibraryRouter.use(authMiddleware);
+eLibraryRouter.use(adminChecker);
 
 // * Routes for Admin Dashboard (protected routes)
 eLibraryRouter.post('', upload.fields([{ name: 'coverImage', maxCount: 1 }, { name: 'file', maxCount: 1 }]), eLibraryController.uploadDocument);

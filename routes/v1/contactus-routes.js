@@ -2,6 +2,7 @@ import express from 'express';
 import 'dotenv/config';
 import { contactUsController } from "../../controllers/v1/contactus-controller.js";
 import { authMiddleware } from '../../middlewares/auth-middleware.js';
+import { adminChecker } from '../../middlewares/adminChecker.js';
 
 // * Create a router for contactus APIs
 const contactUsRouter = express.Router();
@@ -14,6 +15,7 @@ contactUsRouter.post('', contactUsController.createContactUs);
 
 // * Middleware to check the authentication
 contactUsRouter.use(authMiddleware);
+contactUsRouter.use(adminChecker);
 
 contactUsRouter.get('', contactUsController.getAllContactUs);
 contactUsRouter.get('/:contactUsId', contactUsController.getContactUsById);

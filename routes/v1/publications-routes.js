@@ -3,6 +3,7 @@ import 'dotenv/config';
 import { publicationsController } from '../../controllers/v1/publications-controller.js';
 import { authMiddleware } from '../../middlewares/auth-middleware.js';
 import multer from 'multer';
+import { adminChecker } from '../../middlewares/adminChecker.js';
 
 // * Multer configuration
 const upload = multer();
@@ -18,6 +19,7 @@ publicationsRouter.get('/:publicationId', publicationsController.getPublicationB
 
 // * Middleware to check the authentication
 publicationsRouter.use(authMiddleware);
+publicationsRouter.use(adminChecker);
 
 // * Routes for Admin Dashboard (protected routes)
 publicationsRouter.post('', upload.fields([{ name: 'coverImage', maxCount: 1 }, { name: 'file', maxCount: 1 }]), publicationsController.uploadPublication);
