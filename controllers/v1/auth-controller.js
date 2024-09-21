@@ -315,6 +315,7 @@ authController.verifyOTPMemberLogin = async (req, res) => {
             mobile: user?.mobile,
             expiryDate: user?.expiryDate,
             code: user?.code,
+            role: user?.role
         }
 
         let application;

@@ -39,9 +39,9 @@ memberCtrl.GetMember = async (req, res) => {
         const { _id, status, createdAt, updatedAt, __v, photo, ageProof,
             degreeCertificate, bioData, ...restAppln } = application;
 
-        const { expiryDate, code } = member;
+        const { expiryDate, code, role } = member;
 
-        res.status(200).json({ member: { ...restAppln, expiryDate, code, _id: member?._id } })
+        res.status(200).json({ member: { ...restAppln, expiryDate, code, role, _id: member?._id } })
     } catch (error) {
         console.log(error)
         res.status(500).json({ msg: 'Something went wrong' })
