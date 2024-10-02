@@ -16,18 +16,28 @@ commonController.uploadFileToFirebase = async (file, folderPath) => {
     console.log(storageRef.name);
 
     try {
-        const resizedBuffer = await sharp(file.buffer)
-            .resize({ width: 800 }) 
-            .jpeg({ quality: 80 })   
-            .toBuffer();
+        let resizedBuffer;
+
+        // Check if the file is PNG, process accordingly
+        if (file.mimetype === 'image/png') {
+            resizedBuffer = await sharp(file.buffer)
+                .resize({ width: 800 })  
+                .png({ quality: 80 }) 
+                .toBuffer();
+        } else {
+            // For non-PNG images (e.g., JPEG)
+            resizedBuffer = await sharp(file.buffer)
+                .resize({ width: 800 }) 
+                .jpeg({ quality: 80 }) 
+                .toBuffer();
+        }
 
         const uniqueName = `${Date.now()}-${file.originalname}`;
-
         const fileUpload = storageRef.file(`${folderPath}/${uniqueName}`);
 
         const writeStream = fileUpload.createWriteStream({
             metadata: {
-                contentType: file.mimetype, 
+                contentType: file.mimetype,  
             },
         });
 
@@ -56,6 +66,7 @@ commonController.uploadFileToFirebase = async (file, folderPath) => {
     }
 };
 
+
 // * Function to delete file from firebase storage
 // ? Function Parameters:
 // @param filePath - The path of the file to be deleted
@@ -83,8 +94,8 @@ commonController.uploadMultipleFiles = async (files, folderPath) => {
     const uploadSingleFile = async (file) => {
         try {
             const resizedBuffer = await sharp(file.buffer)
-                .resize({ width: 800 }) 
-                .jpeg({ quality: 80 })   
+                .resize({ width: 800 })
+                .jpeg({ quality: 80 })
                 .toBuffer();
 
             const uniqueName = `${Date.now()}-${file.originalname}`;
