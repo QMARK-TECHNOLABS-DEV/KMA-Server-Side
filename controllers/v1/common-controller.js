@@ -16,20 +16,26 @@ commonController.uploadFileToFirebase = async (file, folderPath) => {
     console.log(storageRef.name);
 
     try {
-        let resizedBuffer;
+        let buffer;
 
         // Check if the file is PNG, process accordingly
-        if (file.mimetype === 'image/png') {
-            resizedBuffer = await sharp(file.buffer)
-                .resize({ width: 800 })  
-                .png({ quality: 80 }) 
-                .toBuffer();
-        } else {
-            // For non-PNG images (e.g., JPEG)
-            resizedBuffer = await sharp(file.buffer)
-                .resize({ width: 800 }) 
-                .jpeg({ quality: 80 }) 
-                .toBuffer();
+        if (['image/png', 'image/jpeg', 'image/webp', 'image/avif'].includes(file.mimetype)) {
+            if (file.mimetype === 'image/png') {
+                buffer = await sharp(file.buffer)
+                    .resize({ width: 800 })
+                    .png({ quality: 80 })
+                    .toBuffer();
+            }
+            else {
+                // For non-PNG images (e.g., JPEG)
+                buffer = await sharp(file.buffer)
+                    .resize({ width: 800 })
+                    .jpeg({ quality: 80 })
+                    .toBuffer();
+            }
+        }
+        else {
+            buffer = file.buffer
         }
 
         const uniqueName = `${Date.now()}-${file.originalname}`;
@@ -37,11 +43,11 @@ commonController.uploadFileToFirebase = async (file, folderPath) => {
 
         const writeStream = fileUpload.createWriteStream({
             metadata: {
-                contentType: file.mimetype,  
+                contentType: file.mimetype,
             },
         });
 
-        const fileStream = Readable.from(resizedBuffer);
+        const fileStream = Readable.from(buffer);
 
         return new Promise((resolve, reject) => {
             fileStream
@@ -93,10 +99,27 @@ commonController.uploadMultipleFiles = async (files, folderPath) => {
 
     const uploadSingleFile = async (file) => {
         try {
-            const resizedBuffer = await sharp(file.buffer)
-                .resize({ width: 800 })
-                .jpeg({ quality: 80 })
-                .toBuffer();
+            let buffer;
+
+            // Check if the file is PNG, process accordingly
+            if (['image/png', 'image/jpeg', 'image/webp', 'image/avif'].includes(file.mimetype)) {
+                if (file.mimetype === 'image/png') {
+                    buffer = await sharp(file.buffer)
+                        .resize({ width: 800 })
+                        .png({ quality: 80 })
+                        .toBuffer();
+                }
+                else {
+                    // For non-PNG images (e.g., JPEG)
+                    buffer = await sharp(file.buffer)
+                        .resize({ width: 800 })
+                        .jpeg({ quality: 80 })
+                        .toBuffer();
+                }
+            }
+            else {
+                buffer = file.buffer
+            }
 
             const uniqueName = `${Date.now()}-${file.originalname}`;
 
@@ -108,7 +131,7 @@ commonController.uploadMultipleFiles = async (files, folderPath) => {
                 },
             });
 
-            const fileStream = Readable.from(resizedBuffer);
+            const fileStream = Readable.from(buffer);
 
             return new Promise((resolve, reject) => {
                 fileStream
