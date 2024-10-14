@@ -414,9 +414,9 @@ applicationCtrl.UpdateMembershipStatus = async (req, res) => {
         if (memberExistsForApln) { return res.status(409).json({ msg: 'Member already exist' }) }
 
         if (status === "approved") {
-            const { _id, email, mobile } = application;
+            const { _id, email, mobile, code } = application;
 
-            const memberObj = { email, mobile }
+            const memberObj = { email, mobile, code }
             memberObj.memberType = applicationType;
             memberObj.applicationId = _id;
 

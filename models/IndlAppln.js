@@ -2,6 +2,7 @@ import mongoose from "mongoose";
 
 const IndlApplnSchema = new mongoose.Schema({
     applicationType: { type: String, default: 'individual', required: true, immutable: true },
+    code: { type: String },
 
     applicantName: { type: String },
     dob: { type: String },
