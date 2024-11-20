@@ -98,9 +98,9 @@ dashCtrl.analytics = async (req, res) => {
 
         }
 
-        const IndlApplnCount = await IndlAppln.countDocuments(filter) || 0;
-        const CorpApplnCount = await CorpAppln.countDocuments(filter) || 0;
-        const AscCorpApplnCount = await AscCorpAppln.countDocuments(filter) || 0;
+        const IndlApplnCount = await IndlAppln.countDocuments({ ...filter, status: 'pending' }) || 0;
+        const CorpApplnCount = await CorpAppln.countDocuments({ ...filter, status: 'pending' }) || 0;
+        const AscCorpApplnCount = await AscCorpAppln.countDocuments({ ...filter, status: 'pending' }) || 0;
         const applicationCount = IndlApplnCount + CorpApplnCount + AscCorpApplnCount;
 
         const memberCount = await Member.countDocuments(filter);
