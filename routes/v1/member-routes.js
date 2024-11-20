@@ -13,6 +13,7 @@ memberRouter.get('/profile/:id', memberCtrl.GetProfile)
 
 memberRouter.use(adminChecker)
 
+memberRouter.get('/view/:id', memberCtrl.ViewMember)
 memberRouter.get('/:id', memberCtrl.GetMember)
 memberRouter.get('', memberCtrl.GetManyMembers)
 

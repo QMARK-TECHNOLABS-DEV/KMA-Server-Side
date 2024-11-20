@@ -804,4 +804,34 @@ memberCtrl.GetProfile = async (req, res) => {
     }
 }
 
+
+memberCtrl.ViewMember = async (req, res) => {
+    try {
+        const Id = req.params.id;
+        if (!isValidObjectId(Id)) return res.status(409).json({ msg: "Invalid id" });
+
+        const member = await Member.findById(Id).lean();
+
+        let application;
+        if (member?.memberType === "individual") {
+            application = await IndlAppln.findById(member?.applicationId).lean()
+        }
+        else if (member?.memberType === "corporate") {
+            application = await CorpAppln.findById(member?.applicationId).lean()
+        }
+        else if (member?.memberType === "associate") {
+            application = await AscCorpAppln.findById(member?.applicationId).lean()
+        }
+
+        const { _id, status, createdAt, updatedAt, __v, ...restAppln } = application;
+
+        const { expiryDate, code, role } = member;
+
+        res.status(200).json({ member: { ...restAppln, expiryDate, code, role, _id: member?._id } })
+    } catch (error) {
+        console.log(error)
+        res.status(500).json({ msg: 'Something went wrong' })
+    }
+}
+
 export { memberCtrl } 
