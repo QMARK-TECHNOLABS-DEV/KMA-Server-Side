@@ -642,4 +642,32 @@ applicationCtrl.UpdateAssociateCorporateApplication = async (req, res) => {
 };
 
 
+applicationCtrl.ViewApplication = async (req, res) => {
+    try {
+        const Id = req.params.id;
+        const type = req.query.type;
+
+        if (!isValidObjectId(Id)) return res.status(409).json({ msg: "Invalid id" });
+
+        let application = {};
+        if (type === "individual") {
+            application = await IndlAppln.findById(Id).lean()
+
+        }
+        else if (type === "corporate") {
+            application = await CorpAppln.findById(Id).lean()
+
+        }
+        else if (type === "associate") {
+            application = await AscCorpAppln.findById(Id).lean()
+
+        }
+
+        res.status(200).json({ application })
+    } catch (error) {
+        console.log(error)
+        res.status(500).json({ msg: 'Something went wrong' })
+    }
+}
+
 export { applicationCtrl }

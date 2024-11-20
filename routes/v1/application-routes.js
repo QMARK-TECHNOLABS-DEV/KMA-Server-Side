@@ -38,6 +38,7 @@ applicationRouter.use(adminChecker)
 
 applicationRouter.get('', applicationCtrl.GetAllApplications)
 applicationRouter.get('/count', applicationCtrl.applicationCount)
+applicationRouter.get('/view/:id', applicationCtrl.ViewApplication)
 applicationRouter.get('/:id', applicationCtrl.GetApplication)
 
 applicationRouter.put('/status/:id', applicationCtrl.UpdateMembershipStatus)
