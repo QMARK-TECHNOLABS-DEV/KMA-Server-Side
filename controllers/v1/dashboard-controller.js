@@ -63,7 +63,7 @@ dashCtrl.memberChart = async (req, res) => {
         const memberCountCurrentMonth = data[data?.length - 1];
         console.log(data[data?.length - 1])
 
-        const increment = memberCountCurrentMonth / totalMembers * 100;
+        const increment = Math.floor(memberCountCurrentMonth / totalMembers * 100);
 
         const result = {
             labels, data, total: totalMembers, increment
