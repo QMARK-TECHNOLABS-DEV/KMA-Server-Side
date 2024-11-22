@@ -61,7 +61,7 @@ applicationCtrl.GetAllApplications = async (req, res) => {
         const page = req.query.page;
         const entries = req.query.entries;
 
-        const filters = {}
+        const filters = { status: {$ne: 'approved'}}
 
         const { date } = req.query
 
