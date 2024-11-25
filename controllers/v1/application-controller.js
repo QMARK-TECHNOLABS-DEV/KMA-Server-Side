@@ -39,7 +39,7 @@ applicationCtrl.GetApplication = async (req, res) => {
 
         }
 
-        const { status, createdAt, updatedAt, __v, photo, ageProof, 
+        const { status, createdAt, updatedAt, __v, photo, ageProof,
             degreeCertificate, bioData,
             ...restAppln } = application;
 
@@ -61,7 +61,7 @@ applicationCtrl.GetAllApplications = async (req, res) => {
         const page = req.query.page;
         const entries = req.query.entries;
 
-        const filters = { status: {$ne: 'approved'}}
+        const filters = { status: { $ne: 'approved' } }
 
         const { date } = req.query
 
@@ -78,7 +78,17 @@ applicationCtrl.GetAllApplications = async (req, res) => {
 
         }
 
-        if (searchQuery) { filters.applicantName = { $regex: new RegExp(searchQuery, "i") } }
+        if (searchQuery) {
+            const regexPattern = new RegExp(searchQuery, "i")
+
+            filters.$or = [
+                { applicantName: { $regex: regexPattern } },
+                { orgName: { $regex: regexPattern } },
+                { email: { $regex: regexPattern } },
+                { mobile: { $regex: regexPattern } },
+            ]
+        }
+
         if (status) { filters.status = status }
 
         let applications = [];
@@ -190,9 +200,9 @@ applicationCtrl.CreateIndividualApplication = async (req, res, next) => {
 
         }
 
-        if (typeof req?.body?.isSeniorCitizen === 'boolean'){
+        if (typeof req?.body?.isSeniorCitizen === 'boolean') {
             createObj.isSeniorCitizen = req.body.isSeniorCitizen;
-        } 
+        }
 
         if (req.files?.photo?.[0]) {
             const file = req.files?.photo[0];
@@ -459,16 +469,16 @@ applicationCtrl.UpdateIndividualApplication = async (req, res) => {
 
         const { email, mobile, qualifications, trainings, experiences,
             references, lmaName, lmaMembershipNum, ...updateObj } = req.body;
-        
-        console.log({request: req.body})
+
+        console.log({ request: req.body })
 
         if (email && emailRegex.test(email)) updateObj.email = email;
         if (mobile && mobileRegex.test(mobile)) updateObj.mobile = mobile;
 
-        if (typeof req?.body?.isSeniorCitizen === 'boolean'){
+        if (typeof req?.body?.isSeniorCitizen === 'boolean') {
             console.log("senior", req.body.isSeniorCitizen)
             updateObj.isSeniorCitizen = req.body.isSeniorCitizen;
-        } 
+        }
 
         try {
             ['qualifications', 'trainings', 'experiences', 'references'].forEach((field) => {
