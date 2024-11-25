@@ -510,7 +510,7 @@ memberCtrl.updateIndividualMember = async (req, res) => {
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         const mobileRegex = /^[6-9]\d{9}$/;
 
-        const { email, mobile, expiryDate, code, qualifications, trainings,
+        const {_id, email, mobile, expiryDate, code, qualifications, trainings,
             experiences, references, ...applnUpdateObj } = req.body;
 
         console.log({ applnUpdateObj })
@@ -600,7 +600,7 @@ memberCtrl.updateCorporateMember = async (req, res) => {
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         const mobileRegex = /^[6-9]\d{9}$/;
 
-        const { email, mobile, meetReps, references, expiryDate, code, ...applnUpdateObj } = req.body;
+        const {_id, email, mobile, meetReps, references, expiryDate, code, ...applnUpdateObj } = req.body;
 
         const memberObj = {};
 
@@ -693,7 +693,7 @@ memberCtrl.updateAssociateMember = async (req, res) => {
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         const mobileRegex = /^[6-9]\d{9}$/;
 
-        const { email, mobile, meetReps, references, expiryDate, code, ...applnUpdateObj } = req.body;
+        const {_id, email, mobile, meetReps, references, expiryDate, code, ...applnUpdateObj } = req.body;
 
         const memberObj = {};
 
