@@ -80,13 +80,20 @@ memberCtrl.GetManyMembers = async (req, res) => {
         }
 
         if (searchQuery?.trim()) {
+            const regexPattern = new RegExp(searchQuery, "i");
             if (memberType === "individual") {
-                filters['application.applicantName'] = { $regex: new RegExp(searchQuery?.trim(), "i") }
-
-            }
-            else if (["corporate", "associate"]?.includes(memberType)) {
-                filters['application.orgName'] = { $regex: new RegExp(searchQuery?.trim(), "i") }
-
+                filters.$or = [
+                    { "application.applicantName": { $regex: regexPattern } },
+                    { "application.orgName": { $regex: regexPattern } },
+                    { "application.email": { $regex: regexPattern } },
+                    { "application.mobile": { $regex: regexPattern } },
+                ];
+            } else if (["corporate", "associate"].includes(memberType)) {
+                filters.$or = [
+                    { "application.orgName": { $regex: regexPattern } },
+                    { "application.email": { $regex: regexPattern } },
+                    { "application.mobile": { $regex: regexPattern } },
+                ];
             }
         }
 
@@ -510,7 +517,7 @@ memberCtrl.updateIndividualMember = async (req, res) => {
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         const mobileRegex = /^[6-9]\d{9}$/;
 
-        const {_id, email, mobile, expiryDate, code, qualifications, trainings,
+        const { _id, email, mobile, expiryDate, code, qualifications, trainings,
             experiences, references, ...applnUpdateObj } = req.body;
 
         console.log({ applnUpdateObj })
@@ -600,7 +607,7 @@ memberCtrl.updateCorporateMember = async (req, res) => {
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         const mobileRegex = /^[6-9]\d{9}$/;
 
-        const {_id, email, mobile, meetReps, references, expiryDate, code, ...applnUpdateObj } = req.body;
+        const { _id, email, mobile, meetReps, references, expiryDate, code, ...applnUpdateObj } = req.body;
 
         const memberObj = {};
 
@@ -693,7 +700,7 @@ memberCtrl.updateAssociateMember = async (req, res) => {
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         const mobileRegex = /^[6-9]\d{9}$/;
 
-        const {_id, email, mobile, meetReps, references, expiryDate, code, ...applnUpdateObj } = req.body;
+        const { _id, email, mobile, meetReps, references, expiryDate, code, ...applnUpdateObj } = req.body;
 
         const memberObj = {};
 
