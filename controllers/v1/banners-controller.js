@@ -1,13 +1,9 @@
-import mongoose from "mongoose";
 import { Banners } from "../../models/banners-model.js";
-import { commonController } from "./common-controller.js";
 import { isValidObjectId } from "mongoose";
 import 'dotenv/config';
 
 import { DeleteObjectCommand } from "@aws-sdk/client-s3";
 import { s3Client, Bucket } from "../../middlewares/multerToS3.js";
-
-const { ObjectId } = mongoose.Types;
 
 const bannerController = {};
 
@@ -20,18 +16,6 @@ dayjs.extend(timezone);
 // Set the default timezone to IST
 dayjs.tz.setDefault('Asia/Kolkata');
 
-// * Function to save banners to MongoDB
-bannerController.saveGalleryToDB = async (name, fileUrl, fileName) => {
-    const collection = mongoose.connection.collection(process.env.BANNERS_COLLECTION_NAME);
-
-    const metadata = new Banners({
-        name: name,
-        fileUrl: fileUrl,
-        fileName: fileName
-    });
-
-    await collection.insertOne(metadata);
-}
 
 // * Function to add file in banners collection
 bannerController.uploadBanner = async (req, res) => {
@@ -45,10 +29,11 @@ bannerController.uploadBanner = async (req, res) => {
 
         if (existingName) { return res.status(409).json({ msg: "Name already exists" }) }
 
-        const { publicUrl: fileUrl, fileName } = await commonController.uploadFileToFirebase(file, process.env.BANNERS_FOLDER_PATH);
+        const banner = await Banners.create({ name, file })
 
-        console.log(fileUrl, fileName);
-        await bannerController.saveGalleryToDB(name, fileUrl, fileName);
+        if (!banner) {
+            return res.status(500).json({ message: 'Attempt failed' })
+        }
 
         return res.status(201).json({ message: 'File uploaded to gallery successfully' });
     } catch (error) {
@@ -77,8 +62,6 @@ bannerController.getAllBanners = async (req, res) => {
 
         }
 
-        // const collection = mongoose.connection.collection(process.env.BANNERS_COLLECTION_NAME);
-
         const banners = await Banners.find(filters).sort({ createdAt: -1 });
 
         return res.status(200).json({ banners: banners });
@@ -97,15 +80,13 @@ bannerController.getBannerById = async (req, res) => {
             return res.status(400).json({ message: 'Invalid id' });
         }
 
-        const collection = mongoose.connection.collection(process.env.BANNERS_COLLECTION_NAME);
+        const banner = await Banners.findById(id);
 
-        const banners = await collection.findOne({ _id: new ObjectId(id) });
-
-        if (!banners) {
+        if (!banner) {
             return res.status(404).json({ message: 'Banner not found' });
         }
 
-        return res.status(200).json(banners);
+        return res.status(200).json({ result: banner });
     } catch (error) {
         console.log(error);
         return res.status(500).json({ message: 'Internal server error' });
@@ -121,17 +102,25 @@ bannerController.deleteBannerById = async (req, res) => {
             return res.status(400).json({ message: 'Invalid id' });
         }
 
-        const collection = mongoose.connection.collection(process.env.BANNERS_COLLECTION_NAME);
+        const banner = await Banners.findByIdAndDelete(id)
 
-        const banners = await collection.findOne({ _id: new ObjectId(id) });
-
-        if (!banners) {
+        if (!banner) {
             return res.status(404).json({ message: 'Banner not found' });
         }
 
-        await commonController.deleteFileFromFirebase(`${banners.fileName}`);
+        if (banner?.file?.key) {
+            const deleteCommand = new DeleteObjectCommand({
+                Bucket: Bucket,
+                Key: banner?.file?.key
+            })
 
-        await collection.deleteOne({ _id: new ObjectId(id) });
+            try {
+                const response = await s3Client.send(deleteCommand)
+                console.log("File deleted Successfully", response)
+            } catch (error) {
+                console.log(error)
+            }
+        }
 
         return res.status(200).json({ message: 'Banner deleted successfully' });
     } catch (error) {
@@ -144,8 +133,7 @@ bannerController.deleteBannerById = async (req, res) => {
 bannerController.updateBannerById = async (req, res) => {
     try {
         const id = req.params.bannerId;
-        const name = req.body.name;
-        const file = req.file;
+        const {name, file} = req.body;
 
         if (!isValidObjectId(id)) {
             return res.status(400).json({ message: 'Invalid id' });
@@ -170,19 +158,28 @@ bannerController.updateBannerById = async (req, res) => {
         }
 
         if (file) {
-            await commonController.deleteFileFromFirebase(`${banner.fileName}`);
+            if (banner?.file?.key && file?.key !== banner.file.key) {
+                try {
+                    const deleteCommand = new DeleteObjectCommand({
+                        Bucket: Bucket,
+                        Key: banner?.file?.key
+                    })
 
-            const { publicUrl: fileUrl, fileName } = await commonController.uploadFileToFirebase(file, process.env.BANNERS_FOLDER_PATH);
+                    const response = await s3Client.send(deleteCommand)
+                    console.log("File deleted Successfully", response)
 
-            createObj.fileUrl = fileUrl;
-            createObj.fileName = fileName;
+                }
+                catch (error) {
+                    console.log(error)
+                }
+            }
         }
 
         const updatedBanner = await Banners.findByIdAndUpdate(id, { $set: createObj }, { new: true });
 
         if (!updatedBanner) { return res.status(404).json({ msg: "Not found" }) }
 
-        return res.status(200).json({ message: 'Banner updated successfully' });
+        return res.status(200).json({ message: 'Banner updated successfully', result: updatedBanner });
     } catch (error) {
         console.log(error);
         return res.status(500).json({ message: 'Internal server error' });
