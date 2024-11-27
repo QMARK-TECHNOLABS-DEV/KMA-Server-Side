@@ -3,8 +3,6 @@ import { isValidObjectId } from "mongoose";
 import 'dotenv/config';
 import { HallEnquiry } from "../../models/hall-enquiries-model.js";
 
-const { ObjectId } = mongoose.Types;
-
 const hallEnquiriesController = {};
 
 import dayjs from 'dayjs';
@@ -34,16 +32,17 @@ hallEnquiriesController.saveHallEnquiryToDB = async (hall, name, email, phoneNo)
 // * Function to add hall enquiry
 hallEnquiriesController.createHallEnquiry = async (req, res) => {
     try {
-        const hall = req.body.hall;
-        const name = req.body.name;
-        const email = req.body.email;
-        const phoneNo = req.body.phoneNo;
+        const { hall, name, email, phoneNo } = req.body;
 
         // Validate Email using regex
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         if (!emailRegex.test(email)) return res.status(400).json({ msg: "Invalid Email format" });
 
-        await hallEnquiriesController.saveHallEnquiryToDB(hall, name, email, phoneNo);
+        const result = await HallEnquiry.create({ hall, name, email, phoneNo })
+
+        if (!result) {
+            return res.status(500).json({ message: 'failed' })
+        }
 
         return res.status(201).json({ message: 'Hall enquiry added successfully' });
     } catch (error) {
@@ -55,23 +54,23 @@ hallEnquiriesController.createHallEnquiry = async (req, res) => {
 hallEnquiriesController.updateHallEnquiry = async (req, res) => {
     try {
         const Id = req.params.id
-        if(!isValidObjectId(Id)){ return res.status(400).json({ message: 'Invalid Id' }); }
+        if (!isValidObjectId(Id)) { return res.status(400).json({ message: 'Invalid Id' }); }
 
         const { status, remark } = req.body;
         const updateObj = {}
 
-        if(remark?.trim()){
+        if (remark?.trim()) {
             updateObj.remark = remark
         }
 
         const statusArray = ['enquiry', 'followup', 'in review', 'confirmed', 'rejected']
-        if(status && statusArray?.includes(status)){
+        if (status && statusArray?.includes(status)) {
             updateObj.status = status
         }
 
-        const updatedEnq = await HallEnquiry.findByIdAndUpdate(Id, { $set: updateObj }, {new:true})
+        const updatedEnq = await HallEnquiry.findByIdAndUpdate(Id, { $set: updateObj }, { new: true })
 
-        if(!updatedEnq){
+        if (!updatedEnq) {
             return res.status(409).json({ message: 'Failed to update' });
         }
 
@@ -109,7 +108,6 @@ hallEnquiriesController.getAllHallEnquiries = async (req, res) => {
             }
 
         }
-        // const collection = mongoose.connection.collection(process.env.HALL_ENQUIRIES_COLLECTION_NAME);
 
         const hallEnquiries = await HallEnquiry.find(filters).sort({ createdAt: -1 });
 
@@ -129,9 +127,7 @@ hallEnquiriesController.getHallEnquiryById = async (req, res) => {
             return res.status(400).json({ message: 'Invalid id' });
         }
 
-        const collection = mongoose.connection.collection(process.env.HALL_ENQUIRIES_COLLECTION_NAME);
-
-        const hallEnquiry = await collection.findOne({ _id: new ObjectId(id) });
+        const hallEnquiry = await HallEnquiry.findById(id)
 
         if (!hallEnquiry) {
             return res.status(404).json({ message: 'Hall enquiry not found' });
@@ -153,15 +149,11 @@ hallEnquiriesController.deleteHallEnquiryById = async (req, res) => {
             return res.status(400).json({ message: 'Invalid id' });
         }
 
-        const collection = mongoose.connection.collection(process.env.HALL_ENQUIRIES_COLLECTION_NAME);
-
-        const hallEnquiry = await collection.findOne({ _id: new ObjectId(id) });
+        const hallEnquiry = await HallEnquiry.findByIdAndDelete(id)
 
         if (!hallEnquiry) {
             return res.status(404).json({ message: 'Hall enquiry not found' });
         }
-
-        await collection.deleteOne({ _id: new ObjectId(id) });
 
         return res.status(200).json({ message: 'Hall enquiry deleted successfully' });
     } catch (error) {
