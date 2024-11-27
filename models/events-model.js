@@ -8,19 +8,16 @@ const eventSchema = new mongoose.Schema({
     },
     date: {
         type: String,
-        required: true
     },
     description: {
         type: String,
-        required: true
     },
     location: {
-        type: String,
-        required: true
+        label: { type: String },
+        link: { type: String },
     },
     speakerName: {
         type: String,
-        required: true
     },
     thumbnail: {
         type: {
@@ -34,8 +31,8 @@ const eventSchema = new mongoose.Schema({
         type: Boolean,
         default: false
     },
-  
-},{timestamps: true});
+
+}, { timestamps: true });
 
 // * Define the model for the events collection
 const Event = mongoose.model(process.env.EVENTS_COLLECTION_NAME, eventSchema);
