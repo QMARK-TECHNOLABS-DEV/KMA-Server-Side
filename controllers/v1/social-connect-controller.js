@@ -1,11 +1,6 @@
-import mongoose from "mongoose";
 import { isValidObjectId} from "mongoose";
 import 'dotenv/config';
-import { SocialConnects, Platform } from "../../models/social-connect-model.js";
-import { commonController } from "./common-controller.js";
-
-const { ObjectId } = mongoose.Types;
-
+import { SocialConnects } from "../../models/social-connect-model.js";
 import { DeleteObjectCommand } from "@aws-sdk/client-s3";
 import { s3Client, Bucket } from "../../middlewares/multerToS3.js";
 
@@ -20,128 +15,22 @@ dayjs.extend(timezone);
 // Set the default timezone to IST
 dayjs.tz.setDefault('Asia/Kolkata');
 
-// * Function to save social connect to MongoDB
-socialConnectController.saveSocialConnectToDB = async (title, platformId, coverImageUrl, coverImagefileName, link) => {
-    const collection = mongoose.connection.collection(process.env.SOCIAL_CONNECT_COLLECTION_NAME);
-
-    const metadata = new SocialConnects({
-        title: title,
-        platform: platformId,
-        coverImageUrl: coverImageUrl,
-        coverImagefileName: coverImagefileName,
-        link: link
-    });
-
-    await collection.insertOne(metadata);
-}
-
-// * Function to save platform to MongoDB
-socialConnectController.savePlatformToDB = async (name) => {
-    const collection = mongoose.connection.collection(process.env.PLATFORM_COLLECTION_NAME);
-
-    const metadata = new Platform({
-        name: name
-    });
-
-    await collection.insertOne(metadata);
-}
-
-// * Function to add a platform name
-socialConnectController.addPlatform = async (req, res) => {
-    try {
-        const name = req.body.name;
-
-        await socialConnectController.savePlatformToDB(name);
-
-        return res.status(201).json({ message: 'Platform added successfully' });
-    } catch (error) {
-        console.log(error);
-        return res.status(500).json({ message: 'Internal server error' });
-    }
-}
-
-// * Function to get all platforms
-socialConnectController.getAllPlatforms = async (req, res) => {
-    try {
-        const collection = mongoose.connection.collection(process.env.PLATFORM_COLLECTION_NAME);
-
-        const platforms = await collection.find().sort({ createdAt: -1 }).toArray();
-
-        return res.status(200).json({ platforms : platforms });
-    } catch (error) {
-        console.log(error);
-        return res.status(500).json({ message: 'Internal server error' });
-    }
-}
-
-// * Function to update a platform name
-socialConnectController.updatePlatform = async (req, res) => {
-    try {
-        const id = req.params.platformId;
-        const name = req.body.name;
-
-        if (!isValidObjectId(id)) {
-            return res.status(400).json({ message: 'Invalid id' });
-        }
-
-        const collection = mongoose.connection.collection(process.env.PLATFORM_COLLECTION_NAME);
-
-        await collection.updateOne({ _id: new ObjectId(id) }, { $set: { name: name, updatedAt: new Date() } });
-
-        return res.status(200).json({ message: 'Platform updated successfully' });
-    } catch (error) {
-        console.log(error);
-        return res.status(500).json({ message: 'Internal server error' });
-    }
-}
-
-// * Function to delete a platform name
-socialConnectController.deletePlatform = async (req, res) => {
-    try {
-        const id = req.params.platformId;
-
-        if (!isValidObjectId(id)) {
-            return res.status(400).json({ message: 'Invalid id' });
-        }
-
-        const collection = mongoose.connection.collection(process.env.PLATFORM_COLLECTION_NAME);
-
-        await collection.deleteOne({ _id: new ObjectId(id) });
-
-        return res.status(200).json({ message: 'Platform deleted successfully' });
-    } catch (error) {
-        console.log(error);
-        return res.status(500).json({ message: 'Internal server error' });
-    }
-}
-
 // * Function to add a social connect link
 socialConnectController.addSocialConnect = async (req, res) => {
     try {
-        console.log(req.body)
-        const title = req.body.title;
-        const platform = req.body.platform;
-        const coverImage = req.file;
-        const link = req.body.link;
+        const { title, platform, thumbnail, link } = req.body;
 
-        // const collection = mongoose.connection.collection(process.env.PLATFORM_COLLECTION_NAME);
-
-        // const platformData = await collection.findOne({ _id : platform });
-
-        const platformData = await Platform.findOne({ _id : platform });
-
-        console.log({platformData})
-
-        if (!platformData) {
-            return res.status(404).json({ message: 'Platform not found' });
+        if(!(platform && link)){
+            return res.status(400).json({message: 'Insufficient data'})
         }
 
-        const { publicUrl: fileUrl, fileName } = await commonController.uploadFileToFirebase(coverImage, process.env.SOCIAL_CONNECT_FOLDER_PATH);
+        const newSocialConnect = await SocialConnects.create({ title, platform, thumbnail, link })
 
+        if (!newSocialConnect) {
+            return res.status(500).json({ msg: "failed" })
+        }
 
-        await socialConnectController.saveSocialConnectToDB(title, platformData._id, fileUrl, fileName, link);
-
-        return res.status(201).json({ message: 'Social connect added successfully' });
+        res.status(200).json({ result: newSocialConnect, msg: "success" })
     } catch (error) {
         console.log(error);
         return res.status(500).json({ message: 'Internal server error' });
@@ -165,13 +54,8 @@ socialConnectController.getAllSocialConnects = async (req, res) => {
                 $gte: startOfDay,
                 $lt: endOfDay
             }
-
         }
-
-        // const collection = mongoose.connection.collection(process.env.SOCIAL_CONNECT_COLLECTION_NAME);
-
         const socialConnects = await SocialConnects.find(filters)
-        .populate('platform', '_id name')
         .sort({ createdAt: -1 });
 
         return res.status(200).json({ socialConnects : socialConnects });
@@ -190,9 +74,7 @@ socialConnectController.getSocialConnectById = async (req, res) => {
             return res.status(400).json({ message: 'Invalid id' });
         }
 
-        const collection = mongoose.connection.collection(process.env.SOCIAL_CONNECT_COLLECTION_NAME);
-
-        const socialConnect = await collection.findOne({ _id: new ObjectId(id) });
+        const socialConnect = await SocialConnects.findById(id)
 
         if (!socialConnect) {
             return res.status(404).json({ message: 'Social connect not found' });
@@ -209,42 +91,53 @@ socialConnectController.getSocialConnectById = async (req, res) => {
 socialConnectController.updateSocialConnectById = async (req, res) => {
     try {
         const id = req.params.socialConnectId;
-        const title = req.body.title;
-        const platform = req.body.platform;
-        const coverImage = req.file;
-        const link = req.body.link;
+        const {title, platform, thumbnail, link }= req.body;
 
         if (!isValidObjectId(id)) {
             return res.status(400).json({ message: 'Invalid id' });
         }
 
-        const platformCollection = mongoose.connection.collection(process.env.PLATFORM_COLLECTION_NAME);
+        const updateObj = {};
 
-        const platformData = await platformCollection.findOne({ _id : new ObjectId(platform)  });
-
-        if (!platformData) {
-            return res.status(404).json({ message: 'Platform not found' });
+        if (title?.trim()) {
+            updateObj.title = title;
+        }
+        if (platform?.trim()) {
+            updateObj.platform = platform;
+        }
+        if (link?.trim()) {
+            updateObj.link = link;
         }
 
-        const collection = mongoose.connection.collection(process.env.SOCIAL_CONNECT_COLLECTION_NAME);
+        const socialconnect = await SocialConnects.findById(id);
 
-        const socialConnect = await collection.findOne({ _id: new ObjectId(id) });
+        if (thumbnail) {
+            if (socialconnect?.thumbnail?.key && thumbnail?.key !== socialconnect.thumbnail.key) {
+                try {
+                    const deleteCommand = new DeleteObjectCommand({
+                        Bucket: Bucket,
+                        Key: socialconnect?.thumbnail?.key
+                    })
 
-        if (!socialConnect) {
-            return res.status(404).json({ message: 'Social connect not found' });
+                    const response = await s3Client.send(deleteCommand)
+                    console.log("File deleted Successfully", response)
+
+                }
+                catch (error) {
+                    console.log(error)
+                }
+            }
+
+            updateObj.thumbnail = thumbnail
         }
 
-        if(coverImage) {
-            await commonController.deleteFileFromFirebase(socialConnect.coverImagefileName);
+        const updatedsocialconnect = await SocialConnects.findByIdAndUpdate(id, { $set: updateObj }, { new: true })
 
-            const { publicUrl: fileUrl, fileName } = await commonController.uploadFileToFirebase(coverImage, process.env.SOCIAL_CONNECT_FOLDER_PATH);
-
-            await collection.updateOne({ _id: new ObjectId(id) }, { $set: { title: title, platform: platform, coverImageUrl: fileUrl, coverImagefileName: fileName, link: link, updatedAt: new Date() } });
-        } else {
-            await collection.updateOne({ _id: new ObjectId(id) }, { $set: { title: title, platform: platform, link: link, updatedAt: new Date() } });
+        if (!updatedsocialconnect) {
+            return res.status(500).json({ msg: 'failed' })
         }
 
-        return res.status(200).json({ message: 'Social connect updated successfully' });
+        res.status(200).json({ result: updatedsocialconnect, msg: "success" })
     } catch (error) {
         console.log(error);
         return res.status(500).json({ message: 'Internal server error' });
@@ -260,19 +153,23 @@ socialConnectController.deleteSocialConnectById = async (req, res) => {
             return res.status(400).json({ message: 'Invalid id' });
         }
 
-        const collection = mongoose.connection.collection(process.env.SOCIAL_CONNECT_COLLECTION_NAME);
-
-        const socialConnect = await collection.findOne({ _id: new ObjectId(id) });
+        const socialConnect = await SocialConnects.findByIdAndDelete(id)
 
         if (!socialConnect) {
             return res.status(404).json({ message: 'Social connect not found' });
         }
 
-        await commonController.deleteFileFromFirebase(socialConnect.coverImagefileName);
+        if (socialConnect?.thumbnail?.key) {
+            const deleteCommand = new DeleteObjectCommand({
+                Bucket: Bucket,
+                Key: socialConnect?.thumbnail?.key
+            })
 
-        await collection.deleteOne({ _id: new ObjectId(id) });
+            const response = await s3Client.send(deleteCommand)
+            console.log("File deleted Successfully", response)
+        }
 
-        return res.status(200).json({ message: 'Social connect deleted successfully' });
+        return res.status(200).json({ message: 'success' });
     } catch (error) {
         console.log(error);
         return res.status(500).json({ message: 'Internal server error' });

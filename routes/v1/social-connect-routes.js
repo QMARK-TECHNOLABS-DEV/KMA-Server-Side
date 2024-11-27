@@ -15,7 +15,6 @@ const platformRouter = express.Router();
 const upload = multer();
 
 // * Routes for client side (unprotected routes)
-platformRouter.get('', socialConnectController.getAllPlatforms);
 socialConnectRouter.get('', socialConnectController.getAllSocialConnects);
 socialConnectRouter.get('/:socialConnectId', socialConnectController.getSocialConnectById);
 
@@ -31,11 +30,6 @@ socialConnectRouter.post('', upload.single('coverImage'), socialConnectControlle
 socialConnectRouter.put('/:socialConnectId', upload.single('coverImage'), socialConnectController.updateSocialConnectById);
 socialConnectRouter.delete('/:socialConnectId', socialConnectController.deleteSocialConnectById);
 
-// * Defining the routes for platform
-
-platformRouter.post('', socialConnectController.addPlatform);
-platformRouter.put('/:platformId', socialConnectController.updatePlatform);
-platformRouter.delete('/:platformId', socialConnectController.deletePlatform);
 
 // ? Export the socialConnectRouter
 export { socialConnectRouter , platformRouter };
