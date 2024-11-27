@@ -22,9 +22,12 @@ const IndlApplnSchema = new mongoose.Schema({
     officePhone: { type: String },
 
     membershipFor: { type: String },
-    lmaName: { type: String },
-    lmaMembershipNum: { type: String },
 
+    lma: {
+        name: { type: String },
+        membershipNum: { type: String }
+    },
+    
     qualifications: [
         {
             type: {

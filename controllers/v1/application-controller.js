@@ -1,6 +1,5 @@
 import { isValidObjectId } from "mongoose";
 import { Member } from "../../models/MemberModel.js";
-import { commonController } from "./common-controller.js";
 
 import { DeleteObjectCommand } from "@aws-sdk/client-s3";
 import { s3Client, Bucket } from "../../middlewares/multerToS3.js";
@@ -306,9 +305,9 @@ applicationCtrl.UpdateMembershipStatus = async (req, res) => {
         if (memberExistsForApln) { return res.status(409).json({ msg: 'Member already exist' }) }
 
         if (status === "approved") {
-            const { _id, email, mobile, code } = application;
+            const { _id, createdAt, updatedAt, _v, ...restFields } = application;
 
-            const memberObj = { email, mobile, code }
+            const memberObj = restFields
             memberObj.memberType = applicationType;
             memberObj.applicationId = _id;
 
