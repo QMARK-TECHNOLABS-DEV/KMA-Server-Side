@@ -162,7 +162,7 @@ applicationCtrl.CreateIndividualApplication = async (req, res, next) => {
             designation, residenceAddress, phone, mobile, email, officeAddress,
             officePhone, membershipFor, lmaName, lmaMembershipNum, nature,
             turnover, jobProfile,
-            hasRenewalPay, payMode,
+            hasRenewalPay, payMode, code, isSeniorCitizen,
             qualifications,trainings,experiences,references,
             photo, ageProof , degreeCertificate, bioData,
         } = req.body;
@@ -183,7 +183,7 @@ applicationCtrl.CreateIndividualApplication = async (req, res, next) => {
             designation, residenceAddress, phone, mobile, email, officeAddress,
             officePhone, membershipFor, lmaName, lmaMembershipNum, nature,
             turnover, jobProfile,
-            hasRenewalPay, payMode, isSeniorCitizen,
+            hasRenewalPay, payMode, code, isSeniorCitizen,
             qualifications,trainings,experiences,references,
             photo, ageProof , degreeCertificate, bioData,
         }
@@ -205,7 +205,7 @@ applicationCtrl.CreateCorporateApplication = async (req, res, next) => {
         const {
             orgName, gstNum, postalAddress, commnAddress, phone, mobile, fax, email,
             nature, turnover, executives, supervisors, workers, capitalEmployed,
-            paidupCapital, commnMode, hasRenewalPay, payMode, meetReps, references
+            paidupCapital, commnMode, hasRenewalPay, payMode, code, meetReps, references
         } = req.body;
 
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -222,7 +222,7 @@ applicationCtrl.CreateCorporateApplication = async (req, res, next) => {
         const createObj = {
             orgName, gstNum, postalAddress, commnAddress, phone, mobile, fax, email,
             nature, turnover, executives, supervisors, workers, capitalEmployed,
-            paidupCapital, commnMode, hasRenewalPay, payMode, meetReps, references
+            paidupCapital, commnMode, hasRenewalPay, payMode, code, meetReps, references
         };
 
         const application = await CorpAppln.create(createObj);
@@ -240,7 +240,7 @@ applicationCtrl.CreateAssociateCorporateApplication = async (req, res, next) => 
         const {
             orgName, gstNum, postalAddress, commnAddress, phone, mobile, fax, email,
             nature, turnover, executives, supervisors, workers, capitalEmployed,
-            paidupCapital, commnMode, hasRenewalPay, payMode, meetReps, references
+            paidupCapital, commnMode, hasRenewalPay, payMode, code, meetReps, references
         } = req.body;
 
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -257,7 +257,7 @@ applicationCtrl.CreateAssociateCorporateApplication = async (req, res, next) => 
         const createObj = {
             orgName, gstNum, postalAddress, commnAddress, phone, mobile, fax, email,
             nature, turnover, executives, supervisors, workers, capitalEmployed,
-            paidupCapital, commnMode, hasRenewalPay, payMode, meetReps, references
+            paidupCapital, commnMode, hasRenewalPay, payMode, code, meetReps, references
         };
 
         const application = await AscCorpAppln.create(createObj);

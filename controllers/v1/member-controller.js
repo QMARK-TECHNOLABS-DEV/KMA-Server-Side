@@ -202,7 +202,9 @@ memberCtrl.createIndividualMemberByAdmin = async (req, res) => {
             designation, residenceAddress, phone, mobile, email, officeAddress,
             officePhone, membershipFor, lmaName, lmaMembershipNum, nature,
             turnover, jobProfile,
-            hasRenewalPay, payMode, code
+            hasRenewalPay, payMode, code, isSeniorCitizen,
+            qualifications, trainings, experiences, references,
+            photo, ageProof, degreeCertificate, bioData,
         } = req.body;
 
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -221,77 +223,10 @@ memberCtrl.createIndividualMemberByAdmin = async (req, res) => {
             designation, residenceAddress, phone, mobile, email, officeAddress,
             officePhone, membershipFor, lmaName, lmaMembershipNum, nature,
             turnover, jobProfile,
-            hasRenewalPay, payMode, status: 'approved'
-        }
-
-        try {
-            if (req?.body?.qualifications) {
-                createObj.qualifications = JSON.parse(req.body.qualifications)
-            }
-            if (req?.body?.trainings) {
-                createObj.trainings = JSON.parse(req.body.trainings)
-            }
-            if (req?.body?.experiences) {
-                createObj.experiences = JSON.parse(req.body.experiences)
-            }
-            if (req?.body?.references) {
-                createObj.references = JSON.parse(req.body.references)
-            }
-
-        } catch (error) {
-            return res.status(400).json({ msg: "Invalid JSON data" });
-
-        }
-
-        if (typeof req?.body?.isSeniorCitizen === 'boolean') {
-            createObj.isSeniorCitizen = req.body.isSeniorCitizen;
-        }
-
-        if (req?.files?.photo?.[0]) {
-            const file = req?.files?.photo[0];
-
-            const { publicUrl, fileName } = await commonController.uploadFileToFirebase(file, process.env.MEMBER_FOLDER_PATH);
-
-            createObj.photo = {
-                name: fileName,
-                location: publicUrl
-            }
-        }
-
-        if (req?.files?.ageProof?.[0]) {
-            const file = req?.files?.ageProof[0];
-
-
-            const { publicUrl, fileName } = await commonController.uploadFileToFirebase(file, process.env.MEMBER_FOLDER_PATH);
-
-            createObj.ageProof = {
-                name: fileName,
-                location: publicUrl
-            }
-        }
-
-        if (req?.files?.degreeCertificate?.[0]) {
-            const file = req?.files?.degreeCertificate[0];
-
-
-            const { publicUrl, fileName } = await commonController.uploadFileToFirebase(file, process.env.MEMBER_FOLDER_PATH);
-
-            createObj.degreeCertificate = {
-                name: fileName,
-                location: publicUrl
-            }
-        }
-
-        if (req?.files?.bioData?.[0]) {
-            const file = req?.files?.bioData[0];
-
-
-            const { publicUrl, fileName } = await commonController.uploadFileToFirebase(file, process.env.MEMBER_FOLDER_PATH);
-
-            createObj.bioData = {
-                name: fileName,
-                location: publicUrl
-            }
+            hasRenewalPay, payMode, status: 'approved',
+            code, isSeniorCitizen,
+            qualifications, trainings, experiences, references,
+            photo, ageProof, degreeCertificate, bioData,
         }
 
         const application = await IndlAppln.create(createObj)
@@ -333,7 +268,7 @@ memberCtrl.createCorporateMemberByAdmin = async (req, res) => {
         const {
             orgName, gstNum, postalAddress, commnAddress, phone, mobile, fax, email,
             nature, turnover, executives, supervisors, workers, capitalEmployed,
-            paidupCapital, commnMode, hasRenewalPay, payMode, code
+            paidupCapital, commnMode, hasRenewalPay, payMode, code, meetReps, references
         } = req.body;
 
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -350,36 +285,9 @@ memberCtrl.createCorporateMemberByAdmin = async (req, res) => {
         const createObj = {
             orgName, gstNum, postalAddress, commnAddress, phone, mobile, fax, email,
             nature, turnover, executives, supervisors, workers, capitalEmployed,
-            paidupCapital, commnMode, hasRenewalPay, payMode, status: 'approved'
+            paidupCapital, commnMode, hasRenewalPay, payMode, status: 'approved',
+            code, meetReps, references
         };
-
-        try {
-            if (req?.body?.meetReps) createObj.meetReps = JSON.parse(req.body.meetReps);
-            if (req?.body?.references) createObj.references = JSON.parse(req.body.references);
-        } catch (err) {
-            return res.status(400).json({ msg: "Invalid JSON data" });
-        }
-
-
-        if (req?.body?.meetReps && req?.files) {
-            const photoKeys = Object.keys(req?.files).filter(key => key.startsWith('photo'));
-
-            for (let photoKey of photoKeys) {
-                const file = req?.files[photoKey][0];
-
-                const { publicUrl, fileName } = await commonController.uploadFileToFirebase(file, process.env.MEMBER_FOLDER_PATH);
-
-                const photoIndex = photoKey.match(/\d+/)[0];
-                const meetRepIndex = createObj?.meetReps?.findIndex((item) => item.rid == photoIndex);
-
-                if (meetRepIndex !== -1) {
-                    createObj.meetReps[meetRepIndex].photo = {
-                        name: fileName,
-                        location: publicUrl,
-                    };
-                }
-            }
-        }
 
         const application = await CorpAppln.create(createObj);
         console.log(application);
@@ -417,7 +325,7 @@ memberCtrl.createAssociateMemberByAdmin = async (req, res) => {
         const {
             orgName, gstNum, postalAddress, commnAddress, phone, mobile, fax, email,
             nature, turnover, executives, supervisors, workers, capitalEmployed,
-            paidupCapital, commnMode, hasRenewalPay, payMode, code
+            paidupCapital, commnMode, hasRenewalPay, payMode, code, meetReps, references
         } = req.body;
 
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -434,35 +342,9 @@ memberCtrl.createAssociateMemberByAdmin = async (req, res) => {
         const createObj = {
             orgName, gstNum, postalAddress, commnAddress, phone, mobile, fax, email,
             nature, turnover, executives, supervisors, workers, capitalEmployed,
-            paidupCapital, commnMode, hasRenewalPay, payMode, status: 'approved'
+            paidupCapital, commnMode, hasRenewalPay, payMode, status: 'approved',
+            code, meetReps, references
         };
-
-        try {
-            if (req?.body?.meetReps) createObj.meetReps = JSON.parse(req.body.meetReps);
-            if (req?.body?.references) createObj.references = JSON.parse(req.body.references);
-        } catch (err) {
-            return res.status(400).json({ msg: "Invalid JSON data" });
-        }
-
-        if (req?.body?.meetReps && req?.files) {
-            const photoKeys = Object.keys(req?.files).filter(key => key.startsWith('photo'));
-
-            for (let photoKey of photoKeys) {
-                const file = req?.files[photoKey][0];
-
-                const { publicUrl, fileName } = await commonController.uploadFileToFirebase(file, process.env.MEMBER_FOLDER_PATH);
-
-                const photoIndex = photoKey.match(/\d+/)[0];
-                const meetRepIndex = createObj?.meetReps?.findIndex((item) => item.rid == photoIndex);
-
-                if (meetRepIndex !== -1) {
-                    createObj.meetReps[meetRepIndex].photo = {
-                        name: fileName,
-                        location: publicUrl,
-                    };
-                }
-            }
-        }
 
         const application = await AscCorpAppln.create(createObj);
         console.log(application);
