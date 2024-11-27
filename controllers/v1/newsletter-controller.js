@@ -1,11 +1,6 @@
-import mongoose from "mongoose";
 import { isValidObjectId } from "mongoose";
 import 'dotenv/config';
 import { Newsletters } from "../../models/newsletter-model.js";
-import { commonController } from "./common-controller.js";
-
-const { ObjectId } = mongoose.Types;
-
 import { DeleteObjectCommand } from "@aws-sdk/client-s3";
 import { s3Client, Bucket } from "../../middlewares/multerToS3.js";
 
@@ -19,21 +14,6 @@ dayjs.extend(timezone);
 
 // Set the default timezone to IST
 dayjs.tz.setDefault('Asia/Kolkata');
-
-// * Function to save newsletters to MongoDB
-newsletterController.saveNewsletterToDB = async (title, fileUrl, fileName, coverImageUrl, coverImagefileName) => {
-    const collection = mongoose.connection.collection(process.env.NEWSLETTERS_COLLECTION_NAME);
-
-    const metadata = new Newsletters({
-        title: title,
-        fileUrl: fileUrl,
-        fileName: fileName,
-        coverImageUrl: coverImageUrl,
-        coverImageFileName: coverImagefileName
-    });
-
-    await collection.insertOne(metadata);
-}
 
 // * Function to upload newsletter
 newsletterController.uploadNewsletter = async (req, res) => {
