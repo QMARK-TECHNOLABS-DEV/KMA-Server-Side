@@ -2,10 +2,7 @@ import {memberCtrl} from "../../controllers/v1/member-controller.js";
 import express from "express"
 const memberRouter = express.Router();
 import { authMiddleware } from "../../middlewares/auth-middleware.js";
-import multer from "multer";
 import { adminChecker } from "../../middlewares/adminChecker.js";
-
-const upload = multer();
 
 memberRouter.use(authMiddleware)
 

@@ -6,6 +6,9 @@ import 'dotenv/config';
 
 const { ObjectId } = mongoose.Types;
 
+import { DeleteObjectCommand } from "@aws-sdk/client-s3";
+import { s3Client, Bucket } from "../../middlewares/multerToS3.js";
+
 const galleryController = {};
 
 import dayjs from 'dayjs';

@@ -6,6 +6,9 @@ import { commonController } from "./common-controller.js";
 
 const { ObjectId } = mongoose.Types;
 
+import { DeleteObjectCommand } from "@aws-sdk/client-s3";
+import { s3Client, Bucket } from "../../middlewares/multerToS3.js";
+
 const socialConnectController = {};
 
 import dayjs from 'dayjs';
