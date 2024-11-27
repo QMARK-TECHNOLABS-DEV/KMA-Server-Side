@@ -20,55 +20,17 @@ memberRouter.get('', memberCtrl.GetManyMembers)
 memberRouter.patch('/:id', memberCtrl.ChangeMemberActiveStatus)
 memberRouter.delete('/:id', memberCtrl.DeleteMember)
 
-memberRouter.post('/individual',
-    upload.fields([
-        { name: 'photo', maxCount: 1 },
-        { name: 'ageProof', maxCount: 1 },
-        { name: 'degreeCertificate', maxCount: 1 },
-        { name: 'bioData', maxCount: 1 },
-    ]),
-    memberCtrl.createIndividualMemberByAdmin);
+memberRouter.post('/individual', memberCtrl.createIndividualMemberByAdmin);
 
-memberRouter.post('/corporate',
-    upload.fields([
-        { name: 'photo1', maxCount: 1 },
-        { name: 'photo2', maxCount: 1 },
-        { name: 'photo3', maxCount: 1 },
-        { name: 'photo4', maxCount: 1 },
-    ]),
-    memberCtrl.createCorporateMemberByAdmin);
+memberRouter.post('/corporate', memberCtrl.createCorporateMemberByAdmin);
 
-memberRouter.post('/associate',
-    upload.fields([
-        { name: 'photo1', maxCount: 1 },
-        { name: 'photo2', maxCount: 1 },
-    ]),
-    memberCtrl.createAssociateMemberByAdmin);
+memberRouter.post('/associate', memberCtrl.createAssociateMemberByAdmin);
 
 
-memberRouter.put('/individual/:id',
-    upload.fields([
-        { name: 'photo', maxCount: 1 },
-        { name: 'ageProof', maxCount: 1 },
-        { name: 'degreeCertificate', maxCount: 1 },
-        { name: 'bioData', maxCount: 1 },
-    ]),
-    memberCtrl.updateIndividualMember);
+memberRouter.put('/individual/:id', memberCtrl.updateIndividualMember);
 
-memberRouter.put('/corporate/:id',
-    upload.fields([
-        { name: 'photo1', maxCount: 1 },
-        { name: 'photo2', maxCount: 1 },
-        { name: 'photo3', maxCount: 1 },
-        { name: 'photo4', maxCount: 1 },
-    ]),
-    memberCtrl.updateCorporateMember);
+memberRouter.put('/corporate/:id', memberCtrl.updateCorporateMember);
 
-memberRouter.put('/associate/:id',
-    upload.fields([
-        { name: 'photo1', maxCount: 1 },
-        { name: 'photo2', maxCount: 1 },
-    ]),
-    memberCtrl.updateAssociateMember);
+memberRouter.put('/associate/:id', memberCtrl.updateAssociateMember);
 
 export { memberRouter }
