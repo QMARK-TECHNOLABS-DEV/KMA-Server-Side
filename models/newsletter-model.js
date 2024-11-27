@@ -22,15 +22,8 @@ const newsletterSchema = new mongoose.Schema({
         type : String,
         required : true
     },
-    createdAt : {
-        type : Date,
-        default : Date.now
-    },
-    updatedAt : {
-        type : Date,
-        default : Date.now
-    }
-});
+   
+},{timestamps: true});
 
 // * Define the model for the newsletter collection
 const Newsletters = mongoose.model(process.env.NEWSLETTERS_COLLECTION_NAME, newsletterSchema);

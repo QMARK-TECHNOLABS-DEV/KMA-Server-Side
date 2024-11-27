@@ -34,15 +34,8 @@ const eventSchema = new mongoose.Schema({
         type: Boolean,
         default: false
     },
-    createdAt: {
-        type: Date,
-        default: Date.now
-    },
-    updatedAt: {
-        type: Date,
-        default: Date.now
-    }
-});
+  
+},{timestamps: true});
 
 // * Define the model for the events collection
 const Event = mongoose.model(process.env.EVENTS_COLLECTION_NAME, eventSchema);

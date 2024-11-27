@@ -22,15 +22,8 @@ const eLibrarySchema = new mongoose.Schema({
         type: String,
         required: true
     },
-    createdAt : {
-        type : Date,
-        default : Date.now
-    },
-    updatedAt : {
-        type : Date,
-        default : Date.now
-    }
-});
+   
+},{timestamps: true});
 
 // * Define the model for the e-library collection
 const ELibraries = mongoose.model(process.env.E_LIBRARY_COLLECTION_NAME, eLibrarySchema);

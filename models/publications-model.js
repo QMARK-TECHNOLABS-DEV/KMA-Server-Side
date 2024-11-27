@@ -22,15 +22,8 @@ const publicationSchema = new mongoose.Schema({
         type: String,
         required: true
     },
-    createdAt: {
-        type: Date,
-        default: Date.now
-    },
-    updatedAt: {
-        type: Date,
-        default: Date.now
-    }
-});
+   
+},{timestamps: true});
 
 // * Define the model for the publications collection
 const Publications = mongoose.model(process.env.PUBLICATIONS_COLLECTION_NAME, publicationSchema);
