@@ -8,13 +8,13 @@ const gallerySchema = new mongoose.Schema({
         required: true
     },
     
-    fileUrl: {
-        type: String,
-        required: true
-    },
-    fileName: {
-        type: String,
-        required: true
+    file: {
+        type: {
+            name: { type: String },
+            location: { type: String },
+            key: { type: String },
+            size: { type: Number },
+        }
     },
    
 },{timestamps: true});

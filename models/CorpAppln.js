@@ -37,6 +37,7 @@ const CorpApplnSchema = new mongoose.Schema({
                     type: {
                         name: { type: String },
                         location: { type: String },
+                        key: { type: String },
                     }
                 },
             }

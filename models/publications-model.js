@@ -6,21 +6,21 @@ const publicationSchema = new mongoose.Schema({
         type: String,
         required: true
     },
-    fileUrl: {
-        type: String,
-        required: true
+    file: {
+        type: {
+            name: { type: String },
+            location: { type: String },
+            key: { type: String },
+            size: { type: Number },
+        }
     },
-    fileName: {
-        type: String,
-        required: true
-    },
-    coverImageUrl: {
-        type: String,
-        required: true
-    },
-    coverImageFileName: {
-        type: String,
-        required: true
+    thumbnail: {
+        type: {
+            name: { type: String },
+            location: { type: String },
+            key: { type: String },
+            size: { type: Number },
+        }
     },
    
 },{timestamps: true});

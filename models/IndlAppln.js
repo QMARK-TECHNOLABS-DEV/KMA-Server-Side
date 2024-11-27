@@ -82,6 +82,7 @@ const IndlApplnSchema = new mongoose.Schema({
         type: {
             name: { type: String },
             location: { type: String },
+            key: { type: String },
         }
     },
 
@@ -89,6 +90,7 @@ const IndlApplnSchema = new mongoose.Schema({
         type: {
             name: { type: String },
             location: { type: String },
+            key: { type: String },
         }
     },
 
@@ -96,6 +98,7 @@ const IndlApplnSchema = new mongoose.Schema({
         type: {
             name: { type: String },
             location: { type: String },
+            key: { type: String },
         }
     },
 
@@ -103,6 +106,7 @@ const IndlApplnSchema = new mongoose.Schema({
         type: {
             name: { type: String },
             location: { type: String },
+            key: { type: String },
         }
     },
 

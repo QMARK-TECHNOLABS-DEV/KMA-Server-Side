@@ -10,13 +10,13 @@ const socailConnectSchema = new mongoose.Schema({
         ref: process.env.PLATFORM_COLLECTION_NAME,
         required : true
     },
-    coverImageUrl : {
-        type : String,
-        required : true
-    },
-    coverImagefileName : {
-        type : String,
-        required : true
+    thumbnail: {
+        type: {
+            name: { type: String },
+            location: { type: String },
+            key: { type: String },
+            size: { type: Number },
+        }
     },
     link : {
         type : String,

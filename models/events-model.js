@@ -22,13 +22,13 @@ const eventSchema = new mongoose.Schema({
         type: String,
         required: true
     },
-    speakerCoverUrl: {
-        type: String,
-        required: true
-    },
-    speakerCoverFileName: {
-        type: String,
-        required: true
+    thumbnail: {
+        type: {
+            name: { type: String },
+            location: { type: String },
+            key: { type: String },
+            size: { type: Number },
+        }
     },
     isArchived: {
         type: Boolean,
