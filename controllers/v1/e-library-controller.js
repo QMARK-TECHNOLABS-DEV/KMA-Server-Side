@@ -1,11 +1,6 @@
-import mongoose from "mongoose";
 import { isValidObjectId } from "mongoose";
 import 'dotenv/config';
 import { ELibraries } from "../../models/e-library-model.js";
-import { commonController } from "./common-controller.js";
-
-const { ObjectId } = mongoose.Types;
-
 import { DeleteObjectCommand } from "@aws-sdk/client-s3";
 import { s3Client, Bucket } from "../../middlewares/multerToS3.js";
 
