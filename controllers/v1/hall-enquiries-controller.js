@@ -1,4 +1,3 @@
-import mongoose from "mongoose";
 import { isValidObjectId } from "mongoose";
 import 'dotenv/config';
 import { HallEnquiry } from "../../models/hall-enquiries-model.js";

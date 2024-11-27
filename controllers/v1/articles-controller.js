@@ -1,12 +1,9 @@
-import mongoose from "mongoose";
 import { isValidObjectId } from "mongoose";
 import 'dotenv/config';
 import { Articles } from "../../models/articles-model.js";
 
 import { DeleteObjectCommand } from "@aws-sdk/client-s3";
 import { s3Client, Bucket } from "../../middlewares/multerToS3.js";
-
-const { ObjectId } = mongoose.Types;
 
 const articlesController = {};
 

@@ -1,20 +1,11 @@
 import express from 'express';
-import morgan from 'morgan';
 import { v1Router } from './routes/v1-routes.js';
 import connectDB from './db.js';
 import cors from 'cors';
-import admin from 'firebase-admin';
-import serviceAccount from './kma-server-firebase-adminsdk-v06dv-429cab45a0.json' assert { type: 'json' };
-
+import 'dotenv/config';
 
 // * Test the connection to MongoDB
 connectDB();
-
-admin.initializeApp(
-  {
-    credential: admin.credential.cert(serviceAccount)
-  }
-);
 
 const app = express();
 
@@ -66,5 +57,3 @@ app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
 });
 
-// ? Export the firebaseApp
-export { admin };

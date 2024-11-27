@@ -16,6 +16,7 @@ import { applicationRouter } from './v1/application-routes.js';
 import { memberRouter } from './v1/member-routes.js';
 import { dashRouter } from './v1/dashboard-routes.js';
 import { dataRouter } from './v1/data-routes.js';
+import { uploadRouter } from './v1/upload-routes.js';
 
 // * Create a router for version 1 APIs
 const v1Router = express.Router();
@@ -39,6 +40,7 @@ v1Router.use('/application', applicationRouter);
 v1Router.use('/member', memberRouter);
 v1Router.use('/dashboard', dashRouter);
 v1Router.use('/data', dataRouter);
+v1Router.use('/uploads', uploadRouter);
 
 v1Router.use('*', (req,res)=> { res.sendStatus(404)});
 

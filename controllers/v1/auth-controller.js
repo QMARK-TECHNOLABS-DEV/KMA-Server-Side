@@ -3,7 +3,6 @@ import { Admin } from '../../models/admin-model.js';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import dotenv from 'dotenv';
-import mongoose from 'mongoose';
 import { Member } from '../../models/MemberModel.js';
 import { OtpModel } from '../../models/OtpModel.js';
 import { IndlAppln } from '../../models/IndlAppln.js';
