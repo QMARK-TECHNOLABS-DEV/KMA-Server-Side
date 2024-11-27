@@ -14,21 +14,6 @@ dayjs.extend(timezone);
 // Set the default timezone to IST
 dayjs.tz.setDefault('Asia/Kolkata');
 
-// * Function to save hall enquiry to MongoDB
-hallEnquiriesController.saveHallEnquiryToDB = async (hall, name, email, phoneNo) => {
-    const collection = mongoose.connection.collection(process.env.HALL_ENQUIRIES_COLLECTION_NAME);
-
-    const metadata = new HallEnquiry({
-        hall: hall,
-        name: name,
-        email: email,
-        phoneNo: phoneNo,
-
-    });
-
-    await collection.insertOne(metadata);
-}
-
 // * Function to add hall enquiry
 hallEnquiriesController.createHallEnquiry = async (req, res) => {
     try {
