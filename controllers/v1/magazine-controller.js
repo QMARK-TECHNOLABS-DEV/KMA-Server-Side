@@ -1,11 +1,6 @@
-import mongoose from "mongoose";
 import { isValidObjectId } from "mongoose";
 import 'dotenv/config';
 import { Magazines } from "../../models/magazine-model.js";
-import { commonController } from "./common-controller.js";
-
-const { ObjectId } = mongoose.Types;
-
 import { DeleteObjectCommand } from "@aws-sdk/client-s3";
 import { s3Client, Bucket } from "../../middlewares/multerToS3.js";
 
@@ -20,21 +15,6 @@ dayjs.extend(timezone);
 // Set the default timezone to IST
 dayjs.tz.setDefault('Asia/Kolkata');
 
-// * Function to save magazine to MongoDB
-magazineController.saveMagazineToDB = async (title, issuedDate, fileUrl, fileName, coverImageUrl, coverImagefileName) => {
-    const collection = mongoose.connection.collection(process.env.MAGAZINE_COLLECTION_NAME);
-
-    const metadata = new Magazines({
-        title: title,
-        issuedDate: issuedDate,
-        fileUrl: fileUrl,
-        fileName: fileName,
-        coverImageUrl: coverImageUrl,
-        coverImageFileName: coverImagefileName
-    });
-
-    await collection.insertOne(metadata);
-}
 
 // * Function to upload magazine
 magazineController.uploadMagazine = async (req, res) => {

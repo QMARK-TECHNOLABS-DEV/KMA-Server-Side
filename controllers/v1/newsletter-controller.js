@@ -38,18 +38,19 @@ newsletterController.saveNewsletterToDB = async (title, fileUrl, fileName, cover
 // * Function to upload newsletter
 newsletterController.uploadNewsletter = async (req, res) => {
     try {
-        const title = req.body.title;
+        const { title, file, thumbnail } = req.body;
 
-        const file = req.files['file'] ? req.files['file'][0] : null;
-        const coverImage = req.files['coverImage'] ? req.files['coverImage'][0] : null;
+        if (!file?.location?.trim()) {
+            return res.status(400).json({ msg: "Upload a File" })
+        }
 
-        const { publicUrl: fileUrl, fileName } = await commonController.uploadFileToFirebase(file, process.env.NEWSLETTER_FOLDER_PATH);
-        const { publicUrl: coverImageUrl, fileName: coverImageName } = await commonController.uploadFileToFirebase(coverImage, process.env.NEWSLETTER_COVER_FOLDER_PATH);
+        const newNewsletters = await Newsletters.create({ title, file, thumbnail })
 
-        console.log(fileUrl, fileName, coverImageUrl, coverImageName);
-        await newsletterController.saveNewsletterToDB(title, fileUrl, fileName, coverImageUrl, coverImageName);
+        if (!newNewsletters) {
+            return res.status(500).json({ msg: "failed" })
+        }
 
-        return res.status(201).json({ message: 'Newsletter uploaded successfully' });
+        res.status(201).json({ result: newNewsletters, msg: "success" })
     } catch (error) {
         console.log(error);
         return res.status(500).json({ message: 'Internal server error' });
@@ -75,11 +76,9 @@ newsletterController.getAllNewsletters = async (req, res) => {
             }
 
         }
-        const collection = mongoose.connection.collection(process.env.NEWSLETTERS_COLLECTION_NAME);
-
         const newsletters = await Newsletters.find(filters).sort({ createdAt: -1 });
 
-        return res.status(200).json({ newsletters : newsletters });
+        return res.status(200).json({ newsletters: newsletters });
     } catch (error) {
         console.log(error);
         return res.status(500).json({ message: 'Internal server error' });
@@ -95,9 +94,7 @@ newsletterController.getNewsletterById = async (req, res) => {
             return res.status(400).json({ message: 'Invalid newsletter id' });
         }
 
-        const collection = mongoose.connection.collection(process.env.NEWSLETTERS_COLLECTION_NAME);
-
-        const newsletter = await collection.findOne({ _id: new ObjectId(id) });
+        const newsletter = await Newsletters.findById(id)
 
         if (!newsletter) {
             return res.status(404).json({ message: 'Newsletter not found' });
@@ -115,24 +112,32 @@ newsletterController.deleteNewsletterById = async (req, res) => {
     try {
         const id = req.params.newsletterId;
 
-        if (!isValidObjectId(id)) {
-            return res.status(400).json({ message: 'Invalid newsletter id' });
+        if (!isValidObjectId(id)) return res.status(409).json({ msg: "Invalid id" })
+
+        const newsletter = await Newsletters.findByIdAndDelete(id);
+        if (!newsletter) return res.status(404).json({ msg: "failed" })
+
+        if (newsletter?.file?.key) {
+            const deleteCommand = new DeleteObjectCommand({
+                Bucket: Bucket,
+                Key: newsletter?.file?.key
+            })
+
+            const response = await s3Client.send(deleteCommand)
+            console.log("File deleted Successfully", response)
         }
 
-        const collection = mongoose.connection.collection(process.env.NEWSLETTERS_COLLECTION_NAME);
+        if (newsletter?.thumbnail?.key) {
+            const deleteCommand = new DeleteObjectCommand({
+                Bucket: Bucket,
+                Key: newsletter?.thumbnail?.key
+            })
 
-        const newsletter = await collection.findOne({ _id: new ObjectId(id) });
-
-        if (!newsletter) {
-            return res.status(404).json({ message: 'Newsletter not found' });
+            const response = await s3Client.send(deleteCommand)
+            console.log("thumbnail deleted Successfully", response)
         }
 
-        await commonController.deleteFileFromFirebase(`${newsletter.fileName}`);
-        await commonController.deleteFileFromFirebase(`${newsletter.coverImageFileName}`);
-
-        await collection.deleteOne({ _id: new ObjectId(id) });
-
-        return res.status(200).json({ message: 'Newsletter deleted successfully' });
+        res.status(200).json({ msg: "success" })
     } catch (error) {
         console.log(error);
         return res.status(500).json({ message: 'Internal server error' });
@@ -143,43 +148,65 @@ newsletterController.deleteNewsletterById = async (req, res) => {
 newsletterController.updateNewsletterById = async (req, res) => {
     try {
         const id = req.params.newsletterId;
+        const { title, file, thumbnail } = req.body;
 
-        if (!isValidObjectId(id)) {
-            return res.status(400).json({ message: 'Invalid newsletter id' });
+        if (!isValidObjectId(id)) return res.status(409).json({ msg: "Invalid Publication id" })
+
+        const updateObj = {};
+
+        if (title?.trim()) {
+            updateObj.title = title
         }
 
-        const collection = mongoose.connection.collection(process.env.NEWSLETTERS_COLLECTION_NAME);
-
-        const newsletter = await collection.findOne({ _id: new ObjectId(id) });
-
-        if (!newsletter) {
-            return res.status(404).json({ message: 'Newsletter not found' });
-        }
-
-        const title = req.body.title;
-
-        const file = req.files['file'] ? req.files['file'][0] : null;
-        const coverImage = req.files['coverImage'] ? req.files['coverImage'][0] : null;
+        const newsletter = await Newsletters.findById(id);
 
         if (file) {
-            await commonController.deleteFileFromFirebase(`${newsletter.fileName}`);
-            const { publicUrl: fileUrl, fileName } = await commonController.uploadFileToFirebase(file, process.env.NEWSLETTER_FOLDER_PATH);
-            newsletter.fileUrl = fileUrl;
-            newsletter.fileName = fileName;
+            if (newsletter?.file?.key && (file?.key !== newsletter.file.key)) {
+                try {
+                    const deleteCommand = new DeleteObjectCommand({
+                        Bucket: Bucket,
+                        Key: newsletter?.file?.key
+                    })
+
+                    const response = await s3Client.send(deleteCommand)
+                    console.log("File deleted Successfully", response)
+
+                }
+                catch (error) {
+                    console.log(error)
+                }
+            }
+
+            updateObj.file = file
         }
 
-        if (coverImage) {
-            await commonController.deleteFileFromFirebase(`${newsletter.coverImageFileName}`);
-            const { publicUrl: coverImageUrl, fileName: coverImageName } = await commonController.uploadFileToFirebase(coverImage, process.env.NEWSLETTER_COVER_FOLDER_PATH);
-            newsletter.coverImageUrl = coverImageUrl;
-            newsletter.coverImageFileName = coverImageName;
+        if (thumbnail) {
+            if (newsletter?.thumbnail?.key && (thumbnail?.key !== newsletter.thumbnail.key)) {
+                try {
+                    const deleteCommand = new DeleteObjectCommand({
+                        Bucket: Bucket,
+                        Key: newsletter?.thumbnail?.key
+                    })
+
+                    const response = await s3Client.send(deleteCommand)
+                    console.log("thumbnail deleted Successfully", response)
+
+                }
+                catch (error) {
+                    console.log(error)
+                }
+            }
+
+            updateObj.thumbnail = thumbnail
         }
 
-        newsletter.title = title;
+        const updatednewsletter = await Newsletters.findByIdAndUpdate(id, { $set: updateObj }, { new: true })
 
-        await collection.updateOne({ _id: new ObjectId(id) }, { $set: newsletter });
+        if (!updatednewsletter) {
+            return res.status(500).json({ msg: 'failed' })
+        }
 
-        return res.status(200).json({ message: 'Newsletter updated successfully' });
+        res.status(200).json({ result: updatednewsletter, msg: "success" })
     } catch (error) {
         console.log(error);
         return res.status(500).json({ message: 'Internal server error' });
