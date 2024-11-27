@@ -1,6 +1,6 @@
-const multer = require('multer');
-const multerS3 = require('multer-s3');
-const { S3Client } = require('@aws-sdk/client-s3');
+import multer from 'multer';
+import multerS3 from 'multer-s3';
+import { S3Client } from '@aws-sdk/client-s3';
 
 const accessKeyId = process.env.DO_SPACES_ACCESS_KEY_ID;
 const secretAccessKey = process.env.DO_SPACES_SECRET_ACCESS_KEY;
@@ -33,4 +33,4 @@ const upload = multer({
 });
 
 
-module.exports = { upload, s3Client , Bucket}
+export { upload, s3Client , Bucket}

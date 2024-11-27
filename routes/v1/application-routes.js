@@ -3,35 +3,14 @@ import express from 'express';
 import { authMiddleware } from "../../middlewares/auth-middleware.js";
 
 const applicationRouter = express.Router();
-import multer from "multer";
+
 import { adminChecker } from "../../middlewares/adminChecker.js";
 
-const upload = multer();
+applicationRouter.post('/individual', applicationCtrl.CreateIndividualApplication);
 
-applicationRouter.post('/individual',
-    upload.fields([
-        { name: 'photo', maxCount: 1 },
-        { name: 'ageProof', maxCount: 1 },
-        { name: 'degreeCertificate', maxCount: 1 },
-        { name: 'bioData', maxCount: 1 },
-    ]),
-    applicationCtrl.CreateIndividualApplication);
+applicationRouter.post('/corporate', applicationCtrl.CreateCorporateApplication);
 
-applicationRouter.post('/corporate',
-    upload.fields([
-        { name: 'photo1', maxCount: 1 },
-        { name: 'photo2', maxCount: 1 },
-        { name: 'photo3', maxCount: 1 },
-        { name: 'photo4', maxCount: 1 },
-    ]),
-    applicationCtrl.CreateCorporateApplication);
-
-applicationRouter.post('/associate',
-    upload.fields([
-        { name: 'photo1', maxCount: 1 },
-        { name: 'photo2', maxCount: 1 },
-    ]),
-    applicationCtrl.CreateAssociateCorporateApplication);
+applicationRouter.post('/associate', applicationCtrl.CreateAssociateCorporateApplication);
 
 applicationRouter.use(authMiddleware)
 applicationRouter.use(adminChecker)
@@ -43,29 +22,10 @@ applicationRouter.get('/:id', applicationCtrl.GetApplication)
 
 applicationRouter.put('/status/:id', applicationCtrl.UpdateMembershipStatus)
 
-applicationRouter.put('/individual/:id',
-    upload.fields([
-        { name: 'photo', maxCount: 1 },
-        { name: 'ageProof', maxCount: 1 },
-        { name: 'degreeCertificate', maxCount: 1 },
-        { name: 'bioData', maxCount: 1 },
-    ]),
-    applicationCtrl.UpdateIndividualApplication);
+applicationRouter.put('/individual/:id', applicationCtrl.UpdateIndividualApplication);
 
-applicationRouter.put('/corporate/:id',
-    upload.fields([
-        { name: 'photo1', maxCount: 1 },
-        { name: 'photo2', maxCount: 1 },
-        { name: 'photo3', maxCount: 1 },
-        { name: 'photo4', maxCount: 1 },
-    ]),
-    applicationCtrl.UpdateCorporateApplication);
+applicationRouter.put('/corporate/:id', applicationCtrl.UpdateCorporateApplication);
 
-applicationRouter.put('/associate/:id',
-    upload.fields([
-        { name: 'photo1', maxCount: 1 },
-        { name: 'photo2', maxCount: 1 },
-    ]),
-    applicationCtrl.UpdateAssociateCorporateApplication);
+applicationRouter.put('/associate/:id', applicationCtrl.UpdateAssociateCorporateApplication);
 
 export { applicationRouter }
