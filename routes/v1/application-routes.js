@@ -5,6 +5,7 @@ import { authMiddleware } from "../../middlewares/auth-middleware.js";
 const applicationRouter = express.Router();
 
 import { adminChecker } from "../../middlewares/adminChecker.js";
+import { superChecker } from "../../middlewares/superChecker.js";
 
 applicationRouter.post('/individual', applicationCtrl.CreateIndividualApplication);
 
@@ -20,7 +21,7 @@ applicationRouter.get('/count', applicationCtrl.applicationCount)
 applicationRouter.get('/view/:id', applicationCtrl.ViewApplication)
 applicationRouter.get('/:id', applicationCtrl.GetApplication)
 
-applicationRouter.put('/status/:id', applicationCtrl.UpdateMembershipStatus)
+applicationRouter.put('/status/:id', superChecker, applicationCtrl.UpdateMembershipStatus)
 
 applicationRouter.put('/individual/:id', applicationCtrl.UpdateIndividualApplication);
 

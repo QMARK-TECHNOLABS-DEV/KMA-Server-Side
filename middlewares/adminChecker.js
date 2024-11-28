@@ -1,7 +1,7 @@
-export const adminChecker = async(req,res,next)=>{
-    if(req?.user?.role === "admin"){
+export const adminChecker = async (req, res, next) => {
+    if (["admin", "super"]?.includes(req?.user?.role)) {
         next()
-    }else{
-        return res.status(401).json({msg:"Unauthorized"})
+    } else {
+        return res.status(401).json({ msg: "Unauthorized" })
     }
 }

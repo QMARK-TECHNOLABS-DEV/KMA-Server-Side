@@ -3,6 +3,7 @@ import express from "express"
 const memberRouter = express.Router();
 import { authMiddleware } from "../../middlewares/auth-middleware.js";
 import { adminChecker } from "../../middlewares/adminChecker.js";
+import { superChecker } from "../../middlewares/superChecker.js";
 
 memberRouter.use(authMiddleware)
 
@@ -14,7 +15,7 @@ memberRouter.get('/view/:id', memberCtrl.ViewMember)
 memberRouter.get('/:id', memberCtrl.GetMember)
 memberRouter.get('', memberCtrl.GetManyMembers)
 
-memberRouter.patch('/:id', memberCtrl.ChangeMemberActiveStatus)
+memberRouter.patch('/:id', superChecker, memberCtrl.ChangeMemberActiveStatus)
 memberRouter.delete('/:id', memberCtrl.DeleteMember)
 
 memberRouter.post('/individual', memberCtrl.createIndividualMemberByAdmin);
