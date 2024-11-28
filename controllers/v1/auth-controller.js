@@ -23,15 +23,15 @@ const validateEmail = (email) => {
 
 const validateMobile = (mobile) => {
     const mobileRegex = /^[6-9]\d{9}$/;
-    return mobileRegex.test(mobile);   
+    return mobileRegex.test(mobile);
 
 };
 
 // ADMIN SIGNUP
 authController.adminSignup = async (req, res) => {
-    res.setHeader('Access-Control-Allow-Origin', '*');
+    // res.setHeader('Access-Control-Allow-Origin', '*');
 
-    const { email, password, name } = req.body;
+    const { email, password, name, role } = req.body;
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) return res.status(400).json({ msg: "Invalid Email format" });
@@ -47,22 +47,20 @@ authController.adminSignup = async (req, res) => {
 
         const hashedPassword = await bcrypt.hash(password, 10);
 
-        const newUser = new Admin({
-            email: email,
+        const createObj = {
+            email,
+            name,
+            role,
             password: hashedPassword,
-            name: name
-        });
+        };
 
-        const savedUser = await newUser.save();
+        const savedUser = await Admin.create(createObj)
 
-        const accessToken = generateAccessToken({ userId: savedUser._id, role: savedUser.role });
+        if (!savedUser) {
+            return res.status(500).json({ message: 'failed' })
+        }
 
-        const refreshToken = generateRefreshToken({ userId: savedUser._id, role: savedUser.role });
-
-        const userInfo = savedUser.toObject();
-        delete userInfo.password;
-
-        res.status(201).json({ userInfo, accessToken, refreshToken });
+        res.status(201).json({message: 'success', result: savedUser});
 
     } catch (error) {
         console.error(error);
@@ -71,7 +69,7 @@ authController.adminSignup = async (req, res) => {
 };
 
 
-// ADMIN LOGIN
+// ADMIN LOGIN for both admins and Super Admin
 authController.adminLogin = async (req, res) => {
     const email = req.body.email;
     console.log("email", email)
@@ -134,7 +132,7 @@ authController.regenerateAccessToken = async (req, res) => {
 }
 
 
-const generateOTP = ()=> {
+const generateOTP = () => {
     const digits = '0123456789';
     let OTP = '';
     for (let i = 0; i < 6; i++) {
@@ -292,11 +290,9 @@ authController.verifyOTPMemberLogin = async (req, res) => {
 
         if (email) {
             user = await Member.findOne({ email, isActive: true }).lean();
-
         }
         else if (mobile) {
             user = await Member.findOne({ mobile, isActive: true }).lean();
-
         }
 
         if (!user) {
@@ -317,32 +313,19 @@ authController.verifyOTPMemberLogin = async (req, res) => {
             role: user?.role
         }
 
-        let application;
         if (user?.memberType === "individual") {
-            application = await IndlAppln.findById(user?.applicationId)
-
-            if (application) {
-                userInfo.name = application?.applicantName;
-                userInfo.photo = application?.photo;
-            }
+            userInfo.name = user?.applicantName;
+            userInfo.photo = user?.photo;
         }
         else if (user?.memberType === "corporate") {
-            application = await CorpAppln.findById(user?.applicationId)
-
-            if (application) {
-                userInfo.name = application?.orgName;
-            }
+            userInfo.name = user?.orgName;
         }
         else if (user?.memberType === "associate") {
-            application = await AscCorpAppln.findById(user?.applicationId)
-
-            if (application) {
-                userInfo.name = application?.orgName;
-            }
+            userInfo.name = user?.orgName;
         }
 
-         //delete the otp doc after use
-         await OtpModel.findByIdAndDelete(validOtp?._id)
+        //delete the otp doc after use
+        await OtpModel.findByIdAndDelete(validOtp?._id)
 
         res.status(200).json({ userInfo, accessToken, refreshToken })
     } catch (error) {
