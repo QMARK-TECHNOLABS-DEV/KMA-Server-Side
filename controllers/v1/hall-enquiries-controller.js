@@ -1,6 +1,7 @@
 import { isValidObjectId } from "mongoose";
 import 'dotenv/config';
 import { HallEnquiry } from "../../models/hall-enquiries-model.js";
+import nodemailer from "nodemailer"
 
 const hallEnquiriesController = {};
 
@@ -26,6 +27,41 @@ hallEnquiriesController.createHallEnquiry = async (req, res) => {
 
         if (!result) {
             return res.status(500).json({ message: 'failed' })
+        }
+
+        const htmlContent = `
+            <h2>Hall enquiry</h2>
+            <span> Hall: ${hall || 'NIL'}</span>
+            <hr>
+            <span> Name: ${name || 'NIL'}</span>
+            <hr>
+            <span> Email: ${email || 'NIL'}</span>
+            <hr>
+            <span> Phone: ${phoneNo || 'NIL'}</span>
+            <hr>
+            `;
+
+        const transporter = nodemailer.createTransport({
+            service: 'gmail',
+            auth: {
+                user: process.env.MAIL_USER,
+                pass: process.env.MAIL_PASSWORD,
+            },
+        });
+
+        try {
+            const info = await transporter.sendMail({
+                from: `KMA Website`,
+                to: process.env.MAIL_RECEIVER,
+                subject: `Hall enquiry`,
+                text: `Hall enquiry`,
+                html: htmlContent
+            });
+
+            console.log("Message sent: %s", info);
+
+        } catch (error) {
+            console.log(error)
         }
 
         return res.status(201).json({ message: 'Hall enquiry added successfully' });
