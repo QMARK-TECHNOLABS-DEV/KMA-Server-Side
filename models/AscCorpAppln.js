@@ -61,6 +61,9 @@ const AscCorpApplnSchema = new mongoose.Schema({
     // important
     status: { type: String, default: 'pending' },
 
+    amount: {type: Number},
+    remark: {type: String},
+
 }, { timestamps: true })
 
 const AscCorpAppln = mongoose.model("AscCorpAppln", AscCorpApplnSchema);

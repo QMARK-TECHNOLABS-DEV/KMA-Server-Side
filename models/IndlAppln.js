@@ -119,6 +119,9 @@ const IndlApplnSchema = new mongoose.Schema({
     // important
     status: { type: String, default: 'pending' },
 
+    amount: {type: Number},
+    remark: {type: String},
+
 }, { timestamps: true })
 
 const IndlAppln = mongoose.model("IndlAppln", IndlApplnSchema);

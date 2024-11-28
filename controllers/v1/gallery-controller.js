@@ -19,7 +19,7 @@ dayjs.tz.setDefault('Asia/Kolkata');
 // * Function to add file in gallery
 galleryController.createGallery = async (req, res) => {
     try {
-        const {event, files} = req.body;
+        const { event, date, files } = req.body;
 
         if (!isValidObjectId(event)) { return res.status(400).json({ msg: "Invalid Id" }) }
 
@@ -29,15 +29,15 @@ galleryController.createGallery = async (req, res) => {
 
         const result = [];
         for (const file of files) {
-           const doc = await Gallery.create(event, file);
-           result.push(doc)
-        }
-        
-        if(!(result.length > 0)){
-            return res.status(500).json({message: 'failed'})
+            const doc = await Gallery.create(event, date, file);
+            result.push(doc)
         }
 
-        return res.status(201).json({ message: 'success' , result});
+        if (!(result.length > 0)) {
+            return res.status(500).json({ message: 'failed' })
+        }
+
+        return res.status(201).json({ message: 'success', result });
     } catch (error) {
         console.log(error);
         return res.status(500).json({ message: 'Internal server error' });
@@ -51,7 +51,7 @@ galleryController.getAllGallery = async (req, res) => {
 
         const { date, event } = req.query
 
-        if(event && isValidObjectId(event)){
+        if (event && isValidObjectId(event)) {
             filters.event = event;
         }
 
@@ -63,7 +63,7 @@ galleryController.getAllGallery = async (req, res) => {
 
             console.log({ startOfDay, endOfDay })
 
-            filters.createdAt = {
+            filters.date = {
                 $gte: startOfDay,
                 $lt: endOfDay
             }
@@ -71,7 +71,7 @@ galleryController.getAllGallery = async (req, res) => {
         }
 
         const gallery = await Gallery.find(filters).sort({ createdAt: -1 })
-        .populate('event', '_id title')
+            .populate('event', '_id title')
 
         return res.status(200).json({ gallery: gallery });
     } catch (error) {
@@ -126,7 +126,7 @@ galleryController.deleteGalleryById = async (req, res) => {
             const response = await s3Client.send(deleteCommand)
             console.log("File deleted Successfully", response)
         }
-        
+
         return res.status(200).json({ message: 'Gallery deleted successfully' });
     } catch (error) {
         console.log(error);
@@ -138,7 +138,7 @@ galleryController.deleteGalleryById = async (req, res) => {
 galleryController.updateGalleryById = async (req, res) => {
     try {
         const id = req.params.galleryId;
-        const {event , file}= req.body;
+        const { event, date, file } = req.body;
 
         if (!isValidObjectId(id)) {
             return res.status(400).json({ message: 'Invalid id' });
@@ -168,10 +168,10 @@ galleryController.updateGalleryById = async (req, res) => {
             }
         }
 
-        const updatedGallery = await Gallery.findByIdAndUpdate(id, {$set: {event, file}}, {new:true})
+        const updatedGallery = await Gallery.findByIdAndUpdate(id, { $set: { event, date, file } }, { new: true })
 
-        if(!updatedGallery){
-            return res.status(500).json({message:'failed'})
+        if (!updatedGallery) {
+            return res.status(500).json({ message: 'failed' })
         }
 
         return res.status(200).json({ message: 'Gallery updated successfully' });

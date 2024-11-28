@@ -164,6 +164,7 @@ applicationCtrl.CreateIndividualApplication = async (req, res, next) => {
             hasRenewalPay, payMode, code, isSeniorCitizen,
             qualifications,trainings,experiences,references,
             photo, ageProof , degreeCertificate, bioData,
+            amount, remark
         } = req.body;
 
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -185,6 +186,7 @@ applicationCtrl.CreateIndividualApplication = async (req, res, next) => {
             hasRenewalPay, payMode, code, isSeniorCitizen,
             qualifications,trainings,experiences,references,
             photo, ageProof , degreeCertificate, bioData,
+            amount, remark
         }
 
         const application = await IndlAppln.create(createObj)
@@ -204,7 +206,8 @@ applicationCtrl.CreateCorporateApplication = async (req, res, next) => {
         const {
             orgName, gstNum, postalAddress, commnAddress, phone, mobile, fax, email,
             nature, turnover, executives, supervisors, workers, capitalEmployed,
-            paidupCapital, commnMode, hasRenewalPay, payMode, code, meetReps, references
+            paidupCapital, commnMode, hasRenewalPay, payMode, code, meetReps, references,
+            amount, remark
         } = req.body;
 
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -221,7 +224,8 @@ applicationCtrl.CreateCorporateApplication = async (req, res, next) => {
         const createObj = {
             orgName, gstNum, postalAddress, commnAddress, phone, mobile, fax, email,
             nature, turnover, executives, supervisors, workers, capitalEmployed,
-            paidupCapital, commnMode, hasRenewalPay, payMode, code, meetReps, references
+            paidupCapital, commnMode, hasRenewalPay, payMode, code, meetReps, references,
+            amount, remark
         };
 
         const application = await CorpAppln.create(createObj);
@@ -239,7 +243,8 @@ applicationCtrl.CreateAssociateCorporateApplication = async (req, res, next) => 
         const {
             orgName, gstNum, postalAddress, commnAddress, phone, mobile, fax, email,
             nature, turnover, executives, supervisors, workers, capitalEmployed,
-            paidupCapital, commnMode, hasRenewalPay, payMode, code, meetReps, references
+            paidupCapital, commnMode, hasRenewalPay, payMode, code, meetReps, references,
+            amount, remark
         } = req.body;
 
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;

@@ -163,7 +163,8 @@ const MemberSchema = new mongoose.Schema({
 
     commnMode: { type: String },
 
-
+    amount: {type: Number},
+    remark: {type: String},
 
 }, { timestamps: true })
 

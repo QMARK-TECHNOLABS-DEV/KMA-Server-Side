@@ -7,7 +7,9 @@ const gallerySchema = new mongoose.Schema({
         ref: "events",
         required: true
     },
-    
+
+    date: { type: Date },
+
     file: {
         type: {
             name: { type: String },
@@ -16,8 +18,8 @@ const gallerySchema = new mongoose.Schema({
             size: { type: Number },
         }
     },
-   
-},{timestamps: true});
+
+}, { timestamps: true });
 
 // * Define the model for the gallery collection
 const Gallery = mongoose.model(process.env.GALLERY_COLLECTION_NAME, gallerySchema);

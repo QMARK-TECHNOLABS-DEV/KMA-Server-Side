@@ -206,6 +206,7 @@ memberCtrl.createIndividualMemberByAdmin = async (req, res) => {
             hasRenewalPay, payMode, code, isSeniorCitizen,
             qualifications, trainings, experiences, references,
             photo, ageProof, degreeCertificate, bioData,
+            amount, remark
         } = req.body;
 
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -228,6 +229,7 @@ memberCtrl.createIndividualMemberByAdmin = async (req, res) => {
             code, isSeniorCitizen,
             qualifications, trainings, experiences, references,
             photo, ageProof, degreeCertificate, bioData,
+            amount, remark
         }
 
         createObj.memberType = "individual";
@@ -256,7 +258,8 @@ memberCtrl.createCorporateMemberByAdmin = async (req, res) => {
         const {
             orgName, gstNum, postalAddress, commnAddress, phone, mobile, fax, email,
             nature, turnover, executives, supervisors, workers, capitalEmployed,
-            paidupCapital, commnMode, hasRenewalPay, payMode, code, meetReps, references
+            paidupCapital, commnMode, hasRenewalPay, payMode, code, meetReps, references,
+            amount, remark
         } = req.body;
 
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -274,7 +277,7 @@ memberCtrl.createCorporateMemberByAdmin = async (req, res) => {
             orgName, gstNum, postalAddress, commnAddress, phone, mobile, fax, email,
             nature, turnover, executives, supervisors, workers, capitalEmployed,
             paidupCapital, commnMode, hasRenewalPay, payMode, status: 'approved',
-            code, meetReps, references
+            code, meetReps, references,amount, remark
         };
 
         createObj.memberType = "corporate";
@@ -302,7 +305,8 @@ memberCtrl.createAssociateMemberByAdmin = async (req, res) => {
         const {
             orgName, gstNum, postalAddress, commnAddress, phone, mobile, fax, email,
             nature, turnover, executives, supervisors, workers, capitalEmployed,
-            paidupCapital, commnMode, hasRenewalPay, payMode, code, meetReps, references
+            paidupCapital, commnMode, hasRenewalPay, payMode, code, meetReps, references,
+            amount, remark
         } = req.body;
 
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -320,7 +324,7 @@ memberCtrl.createAssociateMemberByAdmin = async (req, res) => {
             orgName, gstNum, postalAddress, commnAddress, phone, mobile, fax, email,
             nature, turnover, executives, supervisors, workers, capitalEmployed,
             paidupCapital, commnMode, hasRenewalPay, payMode, status: 'approved',
-            code, meetReps, references
+            code, meetReps, references,amount, remark
         };
 
         createObj.memberType = "associate";
