@@ -26,23 +26,25 @@ memberCtrl.GetMember = async (req, res) => {
 
         const member = await Member.findById(Id).lean();
 
-        let application;
-        if (member?.memberType === "individual") {
-            application = await IndlAppln.findById(member?.applicationId).lean()
-        }
-        else if (member?.memberType === "corporate") {
-            application = await CorpAppln.findById(member?.applicationId).lean()
-        }
-        else if (member?.memberType === "associate") {
-            application = await AscCorpAppln.findById(member?.applicationId).lean()
-        }
+        // let application;
+        // if (member?.memberType === "individual") {
+        //     application = await IndlAppln.findById(member?.applicationId).lean()
+        // }
+        // else if (member?.memberType === "corporate") {
+        //     application = await CorpAppln.findById(member?.applicationId).lean()
+        // }
+        // else if (member?.memberType === "associate") {
+        //     application = await AscCorpAppln.findById(member?.applicationId).lean()
+        // }
 
-        const { _id, status, createdAt, updatedAt, __v, photo, ageProof,
-            degreeCertificate, bioData, ...restAppln } = application;
+        // const { _id, status, createdAt, updatedAt, __v, photo, ageProof,
+        //     degreeCertificate, bioData, ...restAppln } = application;
 
-        const { expiryDate, code, role } = member;
+        // const { expiryDate, code, role } = member;
 
-        res.status(200).json({ member: { ...restAppln, expiryDate, code, role, _id: member?._id } })
+        const { password, ...restData } = member;
+
+        res.status(200).json({ member: restData })
     } catch (error) {
         console.log(error)
         res.status(500).json({ msg: 'Something went wrong' })
@@ -84,16 +86,16 @@ memberCtrl.GetManyMembers = async (req, res) => {
             const regexPattern = new RegExp(searchQuery, "i");
             if (memberType === "individual") {
                 filters.$or = [
-                    { "application.applicantName": { $regex: regexPattern } },
-                    { "application.orgName": { $regex: regexPattern } },
-                    { "application.email": { $regex: regexPattern } },
-                    { "application.mobile": { $regex: regexPattern } },
+                    { applicantName: { $regex: regexPattern } },
+                    { orgName: { $regex: regexPattern } },
+                    { email: { $regex: regexPattern } },
+                    { mobile: { $regex: regexPattern } },
                 ];
             } else if (["corporate", "associate"].includes(memberType)) {
                 filters.$or = [
-                    { "application.orgName": { $regex: regexPattern } },
-                    { "application.email": { $regex: regexPattern } },
-                    { "application.mobile": { $regex: regexPattern } },
+                    { orgName: { $regex: regexPattern } },
+                    { email: { $regex: regexPattern } },
+                    { mobile: { $regex: regexPattern } },
                 ];
             }
         }
@@ -210,9 +212,11 @@ memberCtrl.createIndividualMemberByAdmin = async (req, res) => {
         } = req.body;
 
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        const mobileRegex = /^[6-9]\d{9}$/;
+        // const mobileRegex = /^[6-9]\d{9}$/;
 
-        if (!((email && emailRegex.test(email)) || (mobile && mobileRegex.test(mobile)))) {
+        console.log({CIMA: req.body})
+
+        if (!((email && emailRegex.test(email)) || mobile)) {
             return res.status(400).json({ msg: "Either email or mobile number should be present" })
         }
 
@@ -541,22 +545,22 @@ memberCtrl.ViewMember = async (req, res) => {
 
         const member = await Member.findById(Id).lean();
 
-        let application;
-        if (member?.memberType === "individual") {
-            application = await IndlAppln.findById(member?.applicationId).lean()
-        }
-        else if (member?.memberType === "corporate") {
-            application = await CorpAppln.findById(member?.applicationId).lean()
-        }
-        else if (member?.memberType === "associate") {
-            application = await AscCorpAppln.findById(member?.applicationId).lean()
-        }
+        // let application;
+        // if (member?.memberType === "individual") {
+        //     application = await IndlAppln.findById(member?.applicationId).lean()
+        // }
+        // else if (member?.memberType === "corporate") {
+        //     application = await CorpAppln.findById(member?.applicationId).lean()
+        // }
+        // else if (member?.memberType === "associate") {
+        //     application = await AscCorpAppln.findById(member?.applicationId).lean()
+        // }
 
-        const { _id, status, createdAt, updatedAt, __v, ...restAppln } = application;
+        // const { _id, status, createdAt, updatedAt, __v, ...restAppln } = application;
 
-        const { expiryDate, code, role } = member;
+        const { password, ...restData } = member;
 
-        res.status(200).json({ member: { ...restAppln, expiryDate, code, role, _id: member?._id } })
+        res.status(200).json({ member: restData })
     } catch (error) {
         console.log(error)
         res.status(500).json({ msg: 'Something went wrong' })

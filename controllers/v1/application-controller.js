@@ -41,11 +41,7 @@ applicationCtrl.GetApplication = async (req, res) => {
 
         }
 
-        const { status, createdAt, updatedAt, __v, photo, ageProof,
-            degreeCertificate, bioData,
-            ...restAppln } = application;
-
-        res.status(200).json({ application: restAppln })
+        res.status(200).json({ application })
     } catch (error) {
         console.log(error)
         res.status(500).json({ msg: 'Something went wrong' })
