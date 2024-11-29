@@ -37,6 +37,8 @@ commonCtrl.uploadMultipleFile = (req, res) => {
             return res.status(400).json({ msg: 'No file provided' });
         }
 
+        console.log({'req files': req.files})
+
         const files = [];
         for(const file of req.files){
             const temp = {

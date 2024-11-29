@@ -29,7 +29,7 @@ galleryController.createGallery = async (req, res) => {
 
         const result = [];
         for (const file of files) {
-            const doc = await Gallery.create(event, date, file);
+            const doc = await Gallery.create({event, date, file});
             result.push(doc)
         }
 
@@ -111,7 +111,7 @@ galleryController.deleteGalleryById = async (req, res) => {
             return res.status(400).json({ message: 'Invalid id' });
         }
 
-        const gallery = await Gallery.findById(id)
+        const gallery = await Gallery.findByIdAndDelete(id)
 
         if (!gallery) {
             return res.status(404).json({ message: 'Gallery not found' });

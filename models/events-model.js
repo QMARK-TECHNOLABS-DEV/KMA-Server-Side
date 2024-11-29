@@ -12,10 +12,8 @@ const eventSchema = new mongoose.Schema({
     description: {
         type: String,
     },
-    location: {
-        label: { type: String },
-        link: { type: String },
-    },
+    location: { type: String },
+    maplink: { type: String },
     speakerName: {
         type: String,
     },

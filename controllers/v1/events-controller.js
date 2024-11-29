@@ -11,13 +11,13 @@ const eventsController = {};
 // * Function to create an event
 eventsController.createEvent = async (req, res) => {
     try {
-        const { title, date, description, location, speakerName, thumbnail } = req.body;
+        const { title, date, description, location, maplink, speakerName, thumbnail } = req.body;
 
         if (!title?.trim()) {
             return res.status(400).json({ message: 'Invalid data' })
         }
 
-        const event = await Event.create({ title, date, description, location, speakerName, thumbnail });
+        const event = await Event.create({ title, date, description, location, maplink, speakerName, thumbnail });
 
         if (!event) {
             return res.status(500).json({ message: 'Attempt failed' })
@@ -42,7 +42,7 @@ eventsController.getAllEvents = async (req, res) => {
             filter.date = date
         }
 
-        const events = await Event.find(filter).sort({ createdAt: -1 }).toArray();
+        const events = await Event.find(filter).sort({ createdAt: -1 })
 
         return res.status(200).json({ events: events });
     } catch (error) {
@@ -112,7 +112,7 @@ eventsController.updateEventById = async (req, res) => {
     try {
         const id = req.params.eventId;
 
-        const { title, date, description, location, speakerName, thumbnail } = req.body;
+        const { title, date, description, location, maplink, speakerName, thumbnail } = req.body;
 
         if (!isValidObjectId(id)) return res.status(409).json({ msg: "Invalid gallery id" })
 
@@ -135,7 +135,7 @@ eventsController.updateEventById = async (req, res) => {
         }
 
         const updatedevent = await Event.findByIdAndUpdate(id,
-            { $set: { title, date, description, location, speakerName, thumbnail } },
+            { $set: { title, date, description, location, maplink, speakerName, thumbnail } },
             { new: true })
 
         if (!updatedevent) {
