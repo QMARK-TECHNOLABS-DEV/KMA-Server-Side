@@ -17,13 +17,17 @@ dayjs.tz.setDefault('Asia/Kolkata');
 // * Function to add hall enquiry
 hallEnquiriesController.createHallEnquiry = async (req, res) => {
     try {
-        const { hall, name, email, phoneNo } = req.body;
+        const { hall, date, name, email, phoneNo } = req.body;
+
+        if (!(hall && date && name && email && phoneNo)) {
+            return res.status(400).json({ message: 'Insufficient Data' })
+        }
 
         // Validate Email using regex
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         if (!emailRegex.test(email)) return res.status(400).json({ msg: "Invalid Email format" });
 
-        const result = await HallEnquiry.create({ hall, name, email, phoneNo })
+        const result = await HallEnquiry.create({ hall, date, name, email, phoneNo })
 
         if (!result) {
             return res.status(500).json({ message: 'failed' })
@@ -32,6 +36,8 @@ hallEnquiriesController.createHallEnquiry = async (req, res) => {
         const htmlContent = `
             <h2>Hall enquiry</h2>
             <span> Hall: ${hall || 'NIL'}</span>
+            <hr>
+            <span> Date: ${date ? new Date(date)?.toLocaleDateString('en-IN') : 'NIL'}</span>
             <hr>
             <span> Name: ${name || 'NIL'}</span>
             <hr>

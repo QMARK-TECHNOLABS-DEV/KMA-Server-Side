@@ -34,7 +34,6 @@ eventsController.createEvent = async (req, res) => {
 eventsController.getAllEvents = async (req, res) => {
     try {
         const { date } = req.query;
-        console.log(date)
 
         const filter = {}
 

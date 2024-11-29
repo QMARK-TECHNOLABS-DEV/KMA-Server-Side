@@ -6,6 +6,9 @@ const hallEnquirySchema = new mongoose.Schema({
         type: String,
         required: true
     },
+
+    date: { type: String },
+    
     name: {
         type: String,
         required: true
