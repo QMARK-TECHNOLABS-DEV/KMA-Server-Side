@@ -131,7 +131,7 @@ articlesController.updateArticleById = async (req, res) => {
             return res.status(400).json({ message: 'Invalid article id' });
         }
 
-        const article = await Articles.findByIdAndDelete(id)
+        const article = await Articles.findById(id)
 
         if (!article) {
             return res.status(404).json({ message: 'Article not found' });
@@ -164,7 +164,7 @@ articlesController.updateArticleById = async (req, res) => {
         const updated = await Articles.findByIdAndUpdate(id, { $set: req.body }, { new: true })
 
         if(!updated){
-            return res.status(500).json({message: 'Attempt Failed'})
+            return res.status(500).json({message: 'Attempt Failed!'})
         }
 
         return res.status(200).json({ message: 'Article updated successfully', result: updated });
