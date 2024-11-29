@@ -1,12 +1,8 @@
 import express from 'express';
 import 'dotenv/config';
-import multer from 'multer';
 import { galleryController } from '../../controllers/v1/gallery-controller.js';
 import { authMiddleware } from '../../middlewares/auth-middleware.js';
 import { adminChecker } from '../../middlewares/adminChecker.js';
-
-// * Multer configuration
-const upload = multer();
 
 // * Create a router for gallery APIs
 const galleryRouter = express.Router();
@@ -22,9 +18,9 @@ galleryRouter.use(authMiddleware);
 galleryRouter.use(adminChecker);
 
 // * Routes for Admin Dashboard (protected routes)
-galleryRouter.post('', upload.array('files'), galleryController.createGallery);
+galleryRouter.post('', galleryController.createGallery);
 galleryRouter.delete('/:galleryId', galleryController.deleteGalleryById);
-galleryRouter.put('/:galleryId', upload.single('file'), galleryController.updateGalleryById);
+galleryRouter.put('/:galleryId', galleryController.updateGalleryById);
 
 // ? Export the galleryRouter
 export { galleryRouter };
