@@ -150,7 +150,7 @@ magazineController.updateMagazineById = async (req, res) => {
             updateObj.issuedDate = issuedDate
         }
 
-        const magazine = await magazine.findById(id);
+        const magazine = await Magazines.findById(id);
 
         if (file) {
             if (magazine?.file?.key && (file?.key !== magazine.file.key)) {
@@ -192,7 +192,7 @@ magazineController.updateMagazineById = async (req, res) => {
             updateObj.thumbnail = thumbnail
         }
 
-        const updatedmagazine = await magazine.findByIdAndUpdate(id, { $set: updateObj }, { new: true })
+        const updatedmagazine = await Magazines.findByIdAndUpdate(id, { $set: updateObj }, { new: true })
 
         if (!updatedmagazine) {
             return res.status(500).json({ msg: 'failed' })
