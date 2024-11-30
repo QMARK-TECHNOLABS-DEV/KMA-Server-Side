@@ -26,22 +26,6 @@ memberCtrl.GetMember = async (req, res) => {
 
         const member = await Member.findById(Id).lean();
 
-        // let application;
-        // if (member?.memberType === "individual") {
-        //     application = await IndlAppln.findById(member?.applicationId).lean()
-        // }
-        // else if (member?.memberType === "corporate") {
-        //     application = await CorpAppln.findById(member?.applicationId).lean()
-        // }
-        // else if (member?.memberType === "associate") {
-        //     application = await AscCorpAppln.findById(member?.applicationId).lean()
-        // }
-
-        // const { _id, status, createdAt, updatedAt, __v, photo, ageProof,
-        //     degreeCertificate, bioData, ...restAppln } = application;
-
-        // const { expiryDate, code, role } = member;
-
         const { password, ...restData } = member;
 
         res.status(200).json({ member: restData })
@@ -100,50 +84,7 @@ memberCtrl.GetManyMembers = async (req, res) => {
             }
         }
 
-        let collectionName;
-
-        switch (memberType) {
-            case 'individual':
-                collectionName = 'indlapplns';
-                break;
-            case 'corporate':
-                collectionName = 'corpapplns';
-                break;
-            case 'associate':
-                collectionName = 'asccorpapplns';
-                break;
-            default:
-                collectionName = 'indlapplns';
-                break;
-        }
-
-        console.log(collectionName)
-
-        const members = await Member.aggregate([
-            {
-                $lookup: {
-                    from: collectionName,
-                    foreignField: "_id",
-                    localField: "applicationId",
-                    as: "application"
-                }
-            },
-            {
-                $unwind: {
-                    path: "$application",
-                    preserveNullAndEmptyArrays: true
-                }
-            },
-            {
-                $match: { ...filters }
-            },
-            {
-                $sort: {
-                    createdAt: -1
-                }
-            }
-        ]);
-
+        const members = await Member.find(filters).sort({createdAt: -1})
 
         let result = members;
 
@@ -214,7 +155,7 @@ memberCtrl.createIndividualMemberByAdmin = async (req, res) => {
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         // const mobileRegex = /^[6-9]\d{9}$/;
 
-        console.log({CIMA: req.body})
+        console.log({ CIMA: req.body })
 
         if (!((email && emailRegex.test(email)) || mobile)) {
             return res.status(400).json({ msg: "Either email or mobile number should be present" })
@@ -281,7 +222,7 @@ memberCtrl.createCorporateMemberByAdmin = async (req, res) => {
             orgName, gstNum, postalAddress, commnAddress, phone, mobile, fax, email,
             nature, turnover, executives, supervisors, workers, capitalEmployed,
             paidupCapital, commnMode, hasRenewalPay, payMode, status: 'approved',
-            code, meetReps, references,amount, remark
+            code, meetReps, references, amount, remark
         };
 
         createObj.memberType = "corporate";
@@ -328,7 +269,7 @@ memberCtrl.createAssociateMemberByAdmin = async (req, res) => {
             orgName, gstNum, postalAddress, commnAddress, phone, mobile, fax, email,
             nature, turnover, executives, supervisors, workers, capitalEmployed,
             paidupCapital, commnMode, hasRenewalPay, payMode, status: 'approved',
-            code, meetReps, references,amount, remark
+            code, meetReps, references, amount, remark
         };
 
         createObj.memberType = "associate";
