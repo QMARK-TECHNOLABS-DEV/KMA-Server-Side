@@ -187,7 +187,7 @@ eventsController.deleteMultiple = async (req, res) => {
     }
 }
 
-eventsController.registerEvent = async (req, res) => {
+eventsController.postEventRegistration = async (req, res) => {
     try {
         const { event, name, phone, email, organization } = req.body;
         if (!isValidObjectId(event)) { return res.status(400).json({ msg: "Invalid Id" }) }
@@ -268,6 +268,61 @@ eventsController.getManyEventRegistrations = async (req, res) => {
         return res.status(500).json({ message: 'Internal server error' });
     }
 }
+
+
+eventsController.updateEventRegistration = async (req, res) => {
+    try {
+        const { id } = req.params;
+        if (!isValidObjectId(id)) { return res.status(400).json({ msg: "Invalid Id" }) }
+        const { event, name, phone, email, organization } = req.body;
+
+        if (!(phone || email)) {
+            return res.status(400).json({ msg: "Insufficient Data" })
+        }
+
+        const updateObj = {};
+        for (const key of Object.keys(req.body)) {
+            if (req.body[key]) {
+                updateObj[key] = req.body[key]
+            }
+        }
+
+        const updation = await EventRegister.findByIdAndUpdate(id, {
+            $set: updateObj
+        }, { new: true })
+
+        if (!updation) {
+            return res.status(500).json({ msg: 'failed' })
+        }
+
+        res.status(200).json({ msg: "success", updation })
+    } catch (error) {
+        console.log(error);
+        return res.status(500).json({ message: 'Internal server error' });
+    }
+}
+
+eventsController.deleteEventRegistration = async (req, res) => {
+    try {
+        const Id = req.params.id;
+        if (!isValidObjectId(Id)) {
+            return res.status(400).json({ msg: "Invalid Id" })
+        }
+
+        const registration = await EventRegister.findByIdAndDelete(Id)
+        if (!registration) {
+            return res.status(500).json({ msg: 'failed' })
+        }
+
+        res.status(200).json({ msg: 'success' })
+
+    } catch (error) {
+        console.log(error);
+        return res.status(500).json({ message: 'Internal server error' });
+    }
+}
+
+
 
 // ? Export the eventsController
 export { eventsController };
