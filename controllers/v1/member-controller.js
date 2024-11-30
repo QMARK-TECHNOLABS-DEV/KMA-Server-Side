@@ -84,7 +84,7 @@ memberCtrl.GetManyMembers = async (req, res) => {
             }
         }
 
-        const members = await Member.find(filters).sort({createdAt: -1})
+        const members = await Member.find(filters).sort({ createdAt: -1 })
 
         let result = members;
 
@@ -454,24 +454,11 @@ memberCtrl.GetProfile = async (req, res) => {
 
         const member = await Member.findById(Id).lean();
 
-        let application;
-        if (member?.memberType === "individual") {
-            application = await IndlAppln.findById(member?.applicationId).lean()
-        }
-        else if (member?.memberType === "corporate") {
-            application = await CorpAppln.findById(member?.applicationId).lean()
-        }
-        else if (member?.memberType === "associate") {
-            application = await AscCorpAppln.findById(member?.applicationId).lean()
+        if (!member) {
+            return res.status(404).json({ msg: 'Not Found' })
         }
 
-        const { _id, status, createdAt, updatedAt, __v, ageProof,
-            degreeCertificate, bioData, applicationType, hasRenewalPay,
-            payMode, ...restAppln } = application;
-
-        const { memberType, expiryDate, code, role } = member;
-
-        res.status(200).json({ member: { ...restAppln, memberType, expiryDate, code, role, _id: member?._id } })
+        res.status(200).json({ member })
     } catch (error) {
         console.log(error)
         res.status(500).json({ msg: 'Something went wrong' })
@@ -486,22 +473,11 @@ memberCtrl.ViewMember = async (req, res) => {
 
         const member = await Member.findById(Id).lean();
 
-        // let application;
-        // if (member?.memberType === "individual") {
-        //     application = await IndlAppln.findById(member?.applicationId).lean()
-        // }
-        // else if (member?.memberType === "corporate") {
-        //     application = await CorpAppln.findById(member?.applicationId).lean()
-        // }
-        // else if (member?.memberType === "associate") {
-        //     application = await AscCorpAppln.findById(member?.applicationId).lean()
-        // }
+        if (!member) {
+            return res.status(404).json({ msg: 'Not Found' })
+        }
 
-        // const { _id, status, createdAt, updatedAt, __v, ...restAppln } = application;
-
-        const { password, ...restData } = member;
-
-        res.status(200).json({ member: restData })
+        res.status(200).json({ member })
     } catch (error) {
         console.log(error)
         res.status(500).json({ msg: 'Something went wrong' })

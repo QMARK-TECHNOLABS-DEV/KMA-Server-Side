@@ -158,8 +158,8 @@ applicationCtrl.CreateIndividualApplication = async (req, res, next) => {
             officePhone, membershipFor, lmaName, lmaMembershipNum, nature,
             turnover, jobProfile,
             hasRenewalPay, payMode, code, isSeniorCitizen,
-            qualifications,trainings,experiences,references,
-            photo, ageProof , degreeCertificate, bioData,
+            qualifications, trainings, experiences, references,
+            photo, ageProof, degreeCertificate, bioData,
             amount, remark
         } = req.body;
 
@@ -180,8 +180,8 @@ applicationCtrl.CreateIndividualApplication = async (req, res, next) => {
             officePhone, membershipFor, lmaName, lmaMembershipNum, nature,
             turnover, jobProfile,
             hasRenewalPay, payMode, code, isSeniorCitizen,
-            qualifications,trainings,experiences,references,
-            photo, ageProof , degreeCertificate, bioData,
+            qualifications, trainings, experiences, references,
+            photo, ageProof, degreeCertificate, bioData,
             amount, remark
         }
 
@@ -298,7 +298,7 @@ applicationCtrl.UpdateMembershipStatus = async (req, res) => {
         }
 
         if (!application) {
-            return res.status(500).json({ msg: 'Failed to update Membership status' });
+            return res.status(500).json({ msg: 'failed' });
         }
 
         const memberExistsForApln = await Member.findOne({ applicationId: application?._id, memberType: applicationType })
@@ -317,16 +317,14 @@ applicationCtrl.UpdateMembershipStatus = async (req, res) => {
 
             memberObj.expiryDate = expiryDate;
 
-            console.log('memberObj', memberObj)
-
             const member = await Member.create(memberObj);
 
             if (!member) {
-                return res.status(500).json({ msg: 'Failed to create Member' });
+                return res.status(500).json({ msg: 'failed' });
             }
         }
 
-        res.status(200).json({ msg: "Membership status updated successfully" })
+        res.status(200).json({ msg: "success" })
     } catch (error) {
         console.log(error)
         res.status(500).json({ msg: 'Something went wrong' })
@@ -346,6 +344,10 @@ applicationCtrl.UpdateIndividualApplication = async (req, res) => {
             return res.status(404).json({ msg: 'Application not found' });
         }
 
+        if (theIndlAppln?.status === 'approved') {
+            return res.status(400).json({ msg: 'failed' })
+        }
+
         const fileFields = ['photo', 'ageProof', 'degreeCertificate', 'bioData'];
         for (const field of fileFields) {
             const newKey = req.body?.[field]?.key
@@ -358,10 +360,10 @@ applicationCtrl.UpdateIndividualApplication = async (req, res) => {
                             Bucket: Bucket,
                             Key: oldKey
                         })
-    
+
                         const response = await s3Client.send(deleteCommand)
                         console.log("File deleted Successfully", response)
-    
+
                     }
                     catch (error) {
                         console.log(error)
@@ -395,24 +397,28 @@ applicationCtrl.UpdateCorporateApplication = async (req, res) => {
             return res.status(404).json({ msg: 'Application not found' });
         }
 
-        const oldKeyList = theCorpAppln.meetReps.map(item=> item?.photo?.key)
-        const newKeyList = req.body?.meetReps.map(item=> item?.photo?.key)
+        if (theCorpAppln?.status === 'approved') {
+            return res.status(400).json({ msg: 'failed' })
+        }
+
+        const oldKeyList = theCorpAppln.meetReps.map(item => item?.photo?.key)
+        const newKeyList = req.body?.meetReps.map(item => item?.photo?.key)
 
         for (const oldKey of oldKeyList) {
-                // Delete old image if exists
-                if (!newKeyList?.includes(oldKey)) {
-                    try {
-                        const deleteCommand = new DeleteObjectCommand({
-                            Bucket: Bucket,
-                            Key: oldKey
-                        })
-                        const response = await s3Client.send(deleteCommand)
-                        console.log("File deleted Successfully", response)
-                    }
-                    catch (error) {
-                        console.log(error)
-                    }
+            // Delete old image if exists
+            if (!newKeyList?.includes(oldKey)) {
+                try {
+                    const deleteCommand = new DeleteObjectCommand({
+                        Bucket: Bucket,
+                        Key: oldKey
+                    })
+                    const response = await s3Client.send(deleteCommand)
+                    console.log("File deleted Successfully", response)
                 }
+                catch (error) {
+                    console.log(error)
+                }
+            }
         }
 
         const updatedApplication = await CorpAppln.findByIdAndUpdate(Id, { $set: req.body }, { new: true });
@@ -439,24 +445,28 @@ applicationCtrl.UpdateAssociateCorporateApplication = async (req, res) => {
             return res.status(404).json({ msg: 'Application not found' });
         }
 
-        const oldKeyList = theAscCorpAppln.meetReps.map(item=> item?.photo?.key)
-        const newKeyList = req.body?.meetReps.map(item=> item?.photo?.key)
+        if (theAscCorpAppln?.status === 'approved') {
+            return res.status(400).json({ msg: 'failed' })
+        }
+
+        const oldKeyList = theAscCorpAppln.meetReps.map(item => item?.photo?.key)
+        const newKeyList = req.body?.meetReps.map(item => item?.photo?.key)
 
         for (const oldKey of oldKeyList) {
-                // Delete old image if exists
-                if (!newKeyList?.includes(oldKey)) {
-                    try {
-                        const deleteCommand = new DeleteObjectCommand({
-                            Bucket: Bucket,
-                            Key: oldKey
-                        })
-                        const response = await s3Client.send(deleteCommand)
-                        console.log("File deleted Successfully", response)
-                    }
-                    catch (error) {
-                        console.log(error)
-                    }
+            // Delete old image if exists
+            if (!newKeyList?.includes(oldKey)) {
+                try {
+                    const deleteCommand = new DeleteObjectCommand({
+                        Bucket: Bucket,
+                        Key: oldKey
+                    })
+                    const response = await s3Client.send(deleteCommand)
+                    console.log("File deleted Successfully", response)
                 }
+                catch (error) {
+                    console.log(error)
+                }
+            }
         }
 
         const updatedApplication = await AscCorpAppln.findByIdAndUpdate(Id, { $set: req.body }, { new: true });
