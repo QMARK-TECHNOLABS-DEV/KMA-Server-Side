@@ -48,7 +48,7 @@ memberCtrl.GetManyMembers = async (req, res) => {
         const filters = {}
         
         const {month, year} = req.query;
-        
+
         if (month && year) {
             filters.$expr = {
                 $and: [
@@ -62,7 +62,31 @@ memberCtrl.GetManyMembers = async (req, res) => {
             filters.memberType = memberType
         }
 
-        const { date } = req.query
+        const { date , status, renewal} = req.query
+
+        if(status){
+            if(status === 'active'){
+                filters.isActive = true
+            }
+            else if(status === 'inactive'){
+                filters.isActive = false
+            }
+        }
+
+        const today = dayjs().startOf('day');
+
+        if(renewal){
+            if(renewal === 'paid'){
+                filters.expiryDate = {
+                    $gte: today.toDate()
+                }
+            }
+            else if(renewal === 'due'){
+                filters.expiryDate = {
+                    $lt: today.toDate()
+                }
+            }
+        }
 
         if (date) {
             const parsedDate = dayjs(date, 'DD-MM-YYYY');
