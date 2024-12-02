@@ -54,8 +54,8 @@ galleryController.getAllGallery = async (req, res) => {
         if (month && year) {
             filters.$expr = {
                 $and: [
-                    { $eq: [{ $month: "$createdAt" }, month] },
-                    { $eq: [{ $year: "$createdAt" }, year] },
+                    { $eq: [{ $month: "$date" }, month] },
+                    { $eq: [{ $year: "$date" }, year] },
                 ],
             }
         }
@@ -66,20 +66,20 @@ galleryController.getAllGallery = async (req, res) => {
             filters.event = event;
         }
 
-        if (date) {
-            const parsedDate = dayjs(date, 'DD-MM-YYYY');
+        // if (date) {
+        //     const parsedDate = dayjs(date, 'DD-MM-YYYY');
 
-            const startOfDay = parsedDate.startOf('day').toISOString();
-            const endOfDay = parsedDate.endOf('day').toISOString();
+        //     const startOfDay = parsedDate.startOf('day').toISOString();
+        //     const endOfDay = parsedDate.endOf('day').toISOString();
 
-            console.log({ startOfDay, endOfDay })
+        //     console.log({ startOfDay, endOfDay })
 
-            filters.date = {
-                $gte: startOfDay,
-                $lt: endOfDay
-            }
+        //     filters.date = {
+        //         $gte: startOfDay,
+        //         $lt: endOfDay
+        //     }
 
-        }
+        // }
 
         const gallery = await Gallery.find(filters).sort({ createdAt: -1 })
             .populate('event', '_id title')

@@ -37,6 +37,14 @@ eventsController.getAllEvents = async (req, res) => {
 
         const filter = {}
 
+        const {month, year} = req.query;
+
+        const monthString = month.toString().padStart(2, "0");
+        
+        if (month && year) {
+            filter.date = { $regex: `^${year}-${monthString}` }
+        }
+
         if (date) {
             filter.date = date
         }
