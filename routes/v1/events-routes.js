@@ -12,8 +12,8 @@ const eventsRouter = express.Router();
 // * Routes for client side (unprotected routes)
 eventsRouter.post('/register', eventsController.postEventRegistration);
 
-eventsRouter.put('/register', authMiddleware, adminChecker, eventsController.updateEventRegistration);
-eventsRouter.delete('/register',authMiddleware, adminChecker, eventsController.deleteEventRegistration);
+eventsRouter.put('/register/:id', authMiddleware, adminChecker, eventsController.updateEventRegistration);
+eventsRouter.delete('/register/:id',authMiddleware, adminChecker, eventsController.deleteEventRegistration);
 
 eventsRouter.get('/register/:id', authMiddleware, adminChecker, eventsController.getAnEventRegistration);
 eventsRouter.get('/register', authMiddleware, adminChecker, eventsController.getManyEventRegistrations);
