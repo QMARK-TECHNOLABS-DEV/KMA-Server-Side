@@ -162,4 +162,23 @@ dashCtrl.recentUpdates = async (req, res) => {
     }
 }
 
+
+dashCtrl.notifyCount = async (req, res) => {
+    try {
+
+        const filter = {}
+
+        const IndlApplnCount = await IndlAppln.countDocuments({ ...filter, status: 'pending' }) || 0;
+        const CorpApplnCount = await CorpAppln.countDocuments({ ...filter, status: 'pending' }) || 0;
+        const AscCorpApplnCount = await AscCorpAppln.countDocuments({ ...filter, status: 'pending' }) || 0;
+        const applicationCount = IndlApplnCount + CorpApplnCount + AscCorpApplnCount;
+
+        res.status(200).json({ result: applicationCount })
+
+    } catch (error) {
+        console.log(error)
+        res.status(500).json({ msg: 'Internal server error' })
+    }
+}
+
 export { dashCtrl }
