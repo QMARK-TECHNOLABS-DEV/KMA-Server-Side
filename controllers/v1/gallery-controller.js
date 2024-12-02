@@ -49,6 +49,17 @@ galleryController.getAllGallery = async (req, res) => {
     try {
         const filters = {}
 
+        const {month, year} = req.query;
+        
+        if (month && year) {
+            filters.$expr = {
+                $and: [
+                    { $eq: [{ $month: "$createdAt" }, month] },
+                    { $eq: [{ $year: "$createdAt" }, year] },
+                ],
+            }
+        }
+
         const { date, event } = req.query
 
         if (event && isValidObjectId(event)) {

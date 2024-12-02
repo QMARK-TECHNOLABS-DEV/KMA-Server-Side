@@ -61,6 +61,17 @@ applicationCtrl.GetAllApplications = async (req, res) => {
 
         const filters = { status: { $ne: 'approved' } }
 
+        const {month, year} = req.query;
+        
+        if (month && year) {
+            filters.$expr = {
+                $and: [
+                    { $eq: [{ $month: "$createdAt" }, month] },
+                    { $eq: [{ $year: "$createdAt" }, year] },
+                ],
+            }
+        }
+
         const { date } = req.query
 
         if (date) {

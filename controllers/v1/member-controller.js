@@ -40,12 +40,23 @@ memberCtrl.GetManyMembers = async (req, res) => {
         //search query;
         const searchQuery = req.query.search;
         const memberType = req.query.memberType;
-
+        
         // Paginators
         const page = req.query.page;
         const entries = req.query.entries;
-
+        
         const filters = {}
+        
+        const {month, year} = req.query;
+        
+        if (month && year) {
+            filters.$expr = {
+                $and: [
+                    { $eq: [{ $month: "$createdAt" }, month] },
+                    { $eq: [{ $year: "$createdAt" }, year] },
+                ],
+            }
+        }
 
         if (memberType) {
             filters.memberType = memberType

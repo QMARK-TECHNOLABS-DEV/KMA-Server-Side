@@ -114,6 +114,17 @@ hallEnquiriesController.getAllHallEnquiries = async (req, res) => {
 
         const filters = {}
 
+        const {month, year} = req.query;
+        
+        if (month && year) {
+            filters.$expr = {
+                $and: [
+                    { $eq: [{ $month: "$createdAt" }, month] },
+                    { $eq: [{ $year: "$createdAt" }, year] },
+                ],
+            }
+        }
+
         const { date, status } = req.query
         const searchQuery = req.query.search;
         if (searchQuery) { filters.name = { $regex: new RegExp(searchQuery, "i") } }
