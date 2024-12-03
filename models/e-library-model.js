@@ -6,31 +6,24 @@ const eLibrarySchema = new mongoose.Schema({
         type: String,
         required: true
     },
-    fileUrl: {
-        type: String,
-        required: true
+    file: {
+        type: {
+            name: { type: String },
+            location: { type: String },
+            key: { type: String },
+            size: { type: Number },
+        }
     },
-    fileName: {
-        type: String,
-        required: true
+    thumbnail: {
+        type: {
+            name: { type: String },
+            location: { type: String },
+            key: { type: String },
+            size: { type: Number },
+        }
     },
-    coverImageUrl: {
-        type: String,
-        required: true
-    },
-    coverImageFileName: {
-        type: String,
-        required: true
-    },
-    createdAt : {
-        type : Date,
-        default : Date.now
-    },
-    updatedAt : {
-        type : Date,
-        default : Date.now
-    }
-});
+   
+},{timestamps: true});
 
 // * Define the model for the e-library collection
 const ELibraries = mongoose.model(process.env.E_LIBRARY_COLLECTION_NAME, eLibrarySchema);

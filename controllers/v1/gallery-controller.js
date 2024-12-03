@@ -1,10 +1,8 @@
-import mongoose from "mongoose";
 import { Gallery } from "../../models/gallery-model.js";
-import { commonController } from "./common-controller.js";
 import { isValidObjectId } from "mongoose";
 import 'dotenv/config';
-
-const { ObjectId } = mongoose.Types;
+import { DeleteObjectCommand } from "@aws-sdk/client-s3";
+import { s3Client, Bucket } from "../../middlewares/multerToS3.js";
 
 const galleryController = {};
 
@@ -17,40 +15,29 @@ dayjs.extend(timezone);
 // Set the default timezone to IST
 dayjs.tz.setDefault('Asia/Kolkata');
 
-// * Function to save gallery to MongoDB
-galleryController.saveGalleryToDB = async (event, fileUrl, fileName) => {
-    const collection = mongoose.connection.collection(process.env.GALLERY_COLLECTION_NAME);
-
-    const metadata = new Gallery({
-        event: event,
-        fileUrl: fileUrl,
-        fileName: fileName
-    });
-
-    await collection.insertOne(metadata);
-}
 
 // * Function to add file in gallery
 galleryController.createGallery = async (req, res) => {
     try {
-        const event = req.body.event;
-        const files = req.files;
+        const { event, date, files } = req.body;
 
         if (!isValidObjectId(event)) { return res.status(400).json({ msg: "Invalid Id" }) }
 
-        if (!files.length) {
+        if (!(files.length > 0)) {
             return res.status(400).json({ message: 'Insufficient data' });
         }
 
-        const uploadedFiles = await commonController.uploadMultipleFiles(files, process.env.GALLERY_FOLDER_PATH);
-
-        for (const { publicUrl: fileUrl, fileName } of uploadedFiles) {
-            console.log(`File uploaded: ${fileName}, URL: ${fileUrl}`);
-
-            await galleryController.saveGalleryToDB(event, fileUrl, fileName);
+        const result = [];
+        for (const file of files) {
+            const doc = await Gallery.create({event, date, file});
+            result.push(doc)
         }
 
-        return res.status(201).json({ message: 'File uploaded to gallery successfully' });
+        if (!(result.length > 0)) {
+            return res.status(500).json({ message: 'failed' })
+        }
+
+        return res.status(201).json({ message: 'success', result });
     } catch (error) {
         console.log(error);
         return res.status(500).json({ message: 'Internal server error' });
@@ -62,9 +49,20 @@ galleryController.getAllGallery = async (req, res) => {
     try {
         const filters = {}
 
+        const {month, year} = req.query;
+        
+        if (month && year) {
+            filters.$expr = {
+                $and: [
+                    { $eq: [{ $month: "$date" }, month] },
+                    { $eq: [{ $year: "$date" }, year] },
+                ],
+            }
+        }
+
         const { date, event } = req.query
 
-        if(event && isValidObjectId(event)){
+        if (event && isValidObjectId(event)) {
             filters.event = event;
         }
 
@@ -76,17 +74,15 @@ galleryController.getAllGallery = async (req, res) => {
 
             console.log({ startOfDay, endOfDay })
 
-            filters.createdAt = {
+            filters.date = {
                 $gte: startOfDay,
                 $lt: endOfDay
             }
 
         }
 
-        // const collection = mongoose.connection.collection(process.env.GALLERY_COLLECTION_NAME);
-
         const gallery = await Gallery.find(filters).sort({ createdAt: -1 })
-        .populate('event', '_id title')
+            .populate('event', '_id title')
 
         return res.status(200).json({ gallery: gallery });
     } catch (error) {
@@ -104,9 +100,7 @@ galleryController.getGalleryById = async (req, res) => {
             return res.status(400).json({ message: 'Invalid id' });
         }
 
-        const collection = mongoose.connection.collection(process.env.GALLERY_COLLECTION_NAME);
-
-        const gallery = await collection.findOne({ _id: new ObjectId(id) });
+        const gallery = await Gallery.findById(id)
 
         if (!gallery) {
             return res.status(404).json({ message: 'Gallery not found' });
@@ -128,17 +122,21 @@ galleryController.deleteGalleryById = async (req, res) => {
             return res.status(400).json({ message: 'Invalid id' });
         }
 
-        const collection = mongoose.connection.collection(process.env.GALLERY_COLLECTION_NAME);
-
-        const gallery = await collection.findOne({ _id: new ObjectId(id) });
+        const gallery = await Gallery.findByIdAndDelete(id)
 
         if (!gallery) {
             return res.status(404).json({ message: 'Gallery not found' });
         }
 
-        await commonController.deleteFileFromFirebase(`${gallery.fileName}`);
+        if (gallery?.file?.key) {
+            const deleteCommand = new DeleteObjectCommand({
+                Bucket: Bucket,
+                Key: gallery?.file?.key
+            })
 
-        await collection.deleteOne({ _id: new ObjectId(id) });
+            const response = await s3Client.send(deleteCommand)
+            console.log("File deleted Successfully", response)
+        }
 
         return res.status(200).json({ message: 'Gallery deleted successfully' });
     } catch (error) {
@@ -151,29 +149,40 @@ galleryController.deleteGalleryById = async (req, res) => {
 galleryController.updateGalleryById = async (req, res) => {
     try {
         const id = req.params.galleryId;
-        const event = req.body.event;
-        const file = req.file;
+        const { event, date, file } = req.body;
 
         if (!isValidObjectId(id)) {
             return res.status(400).json({ message: 'Invalid id' });
         }
 
-        const collection = mongoose.connection.collection(process.env.GALLERY_COLLECTION_NAME);
-
-        const gallery = await collection.findOne({ _id: new ObjectId(id) });
+        const gallery = await Gallery.findById(id)
 
         if (!gallery) {
             return res.status(404).json({ message: 'Gallery not found' });
         }
 
         if (file) {
-            await commonController.deleteFileFromFirebase(`${gallery.fileName}`);
+            if (gallery?.file?.key && file?.key !== gallery.file.key) {
+                try {
+                    const deleteCommand = new DeleteObjectCommand({
+                        Bucket: Bucket,
+                        Key: gallery?.file?.key
+                    })
 
-            const { publicUrl: fileUrl, fileName } = await commonController.uploadFileToFirebase(file, process.env.GALLERY_FOLDER_PATH);
+                    const response = await s3Client.send(deleteCommand)
+                    console.log("File deleted Successfully", response)
 
-            await collection.updateOne({ _id: new ObjectId(id) }, { $set: { event: event, fileUrl: fileUrl, fileName: fileName } });
-        } else {
-            await collection.updateOne({ _id: new ObjectId(id) }, { $set: { event: event } });
+                }
+                catch (error) {
+                    console.log(error)
+                }
+            }
+        }
+
+        const updatedGallery = await Gallery.findByIdAndUpdate(id, { $set: { event, date, file } }, { new: true })
+
+        if (!updatedGallery) {
+            return res.status(500).json({ message: 'failed' })
         }
 
         return res.status(200).json({ message: 'Gallery updated successfully' });

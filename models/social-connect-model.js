@@ -6,48 +6,25 @@ const socailConnectSchema = new mongoose.Schema({
         required : true
     },
     platform : {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: process.env.PLATFORM_COLLECTION_NAME,
-        required : true
+        type: String,
+        required: true
     },
-    coverImageUrl : {
-        type : String,
-        required : true
-    },
-    coverImagefileName : {
-        type : String,
-        required : true
+    thumbnail: {
+        type: {
+            name: { type: String },
+            location: { type: String },
+            key: { type: String },
+            size: { type: Number },
+        }
     },
     link : {
         type : String,
         required : true
     },
-    createdAt : {
-        type : Date,
-        default : Date.now
-    },
-    updatedAt : {
-        type : Date,
-        default : Date.now
-    }
-});
+    
+},{timestamps: true});
 
-const platformSchema = new mongoose.Schema({
-    name: {
-        type: String,
-        required: true,
-    },
-    createdAt: {
-        type: Date,
-        default: Date.now,
-    },
-    updatedAt: {
-        type: Date,
-        default: Date.now,
-    }
-});
 
 const SocialConnects = mongoose.model(process.env.SOCIAL_CONNECT_COLLECTION_NAME, socailConnectSchema);
-const Platform = mongoose.model(process.env.PLATFORM_COLLECTION_NAME, platformSchema);
 
-export { SocialConnects, Platform };
+export { SocialConnects };

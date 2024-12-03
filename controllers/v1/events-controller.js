@@ -1,47 +1,29 @@
-import mongoose from "mongoose";
 import { Event } from "../../models/events-model.js";
-import { commonController } from "./common-controller.js";
 import { isValidObjectId } from "mongoose";
 import 'dotenv/config';
 import { EventRegister } from "../../models/eventRegister.js";
 
-const { ObjectId } = mongoose.Types;
+import { DeleteObjectCommand } from "@aws-sdk/client-s3";
+import { s3Client, Bucket } from "../../middlewares/multerToS3.js";
 
 const eventsController = {};
-
-// * Function to save events to MongoDB
-eventsController.saveEventToDB = async (title, date, description, location, speakerName, speakerCoverUrl, speakerCoverFileName) => {
-    const collection = mongoose.connection.collection(process.env.EVENTS_COLLECTION_NAME);
-
-    const metadata = new Event({
-        title: title,
-        date: date,
-        description: description,
-        location: location,
-        speakerName: speakerName,
-        speakerCoverUrl: speakerCoverUrl,
-        speakerCoverFileName: speakerCoverFileName
-    });
-
-    await collection.insertOne(metadata);
-}
 
 // * Function to create an event
 eventsController.createEvent = async (req, res) => {
     try {
-        const title = req.body.title;
-        const date = req.body.date;
-        const description = req.body.description;
-        const location = req.body.location;
-        const speakerName = req.body.speakerName;
-        const speakerCover = req.file;
+        const { title, date, description, location, maplink, speakerName, thumbnail } = req.body;
 
-        const { publicUrl: speakerCoverUrl, fileName: speakerCoverName } = await commonController.uploadFileToFirebase(speakerCover, process.env.EVENTS_SPEAKER_COVER_FOLDER_PATH);
+        if (!title?.trim()) {
+            return res.status(400).json({ message: 'Invalid data' })
+        }
 
-        console.log(speakerCoverUrl, speakerCoverName);
-        await eventsController.saveEventToDB(title, date, description, location, speakerName, speakerCoverUrl, speakerCoverName);
+        const event = await Event.create({ title, date, description, location, maplink, speakerName, thumbnail });
 
-        return res.status(201).json({ message: 'Event created successfully' });
+        if (!event) {
+            return res.status(500).json({ message: 'Attempt failed' })
+        }
+
+        return res.status(201).json({ message: 'Event created successfully', result: event });
     } catch (error) {
         console.log(error);
         return res.status(500).json({ message: 'Internal server error' });
@@ -52,17 +34,22 @@ eventsController.createEvent = async (req, res) => {
 eventsController.getAllEvents = async (req, res) => {
     try {
         const { date } = req.query;
-        console.log(date)
 
         const filter = {}
+
+        const {month, year} = req.query;
+
+        
+        if (month && year) {
+            const monthString = month.toString().padStart(2, "0");
+            filter.date = { $regex: `^${year}-${monthString}` }
+        }
 
         if (date) {
             filter.date = date
         }
 
-        const collection = mongoose.connection.collection(process.env.EVENTS_COLLECTION_NAME);
-
-        const events = await collection.find(filter).sort({ createdAt: -1 }).toArray();
+        const events = await Event.find(filter).sort({ createdAt: -1 })
 
         return res.status(200).json({ events: events });
     } catch (error) {
@@ -76,15 +63,15 @@ eventsController.getEventById = async (req, res) => {
     try {
         const eventId = req.params.eventId;
 
-        if (!isValidObjectId(eventId))
+        if (!isValidObjectId(eventId)) {
             return res.status(400).json({ message: 'Invalid event ID format' });
+        }
 
-        const collection = mongoose.connection.collection(process.env.EVENTS_COLLECTION_NAME);
+        const event = await Event.findById(eventId)
 
-        const event = await collection.findOne({ _id: new ObjectId(eventId) });
-
-        if (!event)
+        if (!event) {
             return res.status(404).json({ message: 'Event not found' });
+        }
 
         return res.status(200).json(event);
 
@@ -99,19 +86,25 @@ eventsController.deleteEventById = async (req, res) => {
     try {
         const eventId = req.params.eventId;
 
-        if (!isValidObjectId(eventId))
+        if (!isValidObjectId(eventId)) {
             return res.status(400).json({ message: 'Invalid event ID format' });
+        }
 
-        const collection = mongoose.connection.collection(process.env.EVENTS_COLLECTION_NAME);
+        const event = await Event.findByIdAndDelete(eventId)
 
-        const event = await collection.findOne({ _id: new ObjectId(eventId) });
+        if (!event) {
+            return res.status(404).json({ message: 'failed' });
+        }
 
-        if (!event)
-            return res.status(404).json({ message: 'Event not found' });
+        if (event?.thumbnail?.key) {
+            const deleteCommand = new DeleteObjectCommand({
+                Bucket: Bucket,
+                Key: event?.thumbnail?.key
+            })
 
-        await commonController.deleteFileFromFirebase(`${event.speakerCoverFileName}`);
-
-        await collection.deleteOne({ _id: new ObjectId(eventId) });
+            const response = await s3Client.send(deleteCommand)
+            console.log("File deleted Successfully", response)
+        }
 
         return res.status(200).json({ message: 'Event deleted successfully' });
 
@@ -124,38 +117,39 @@ eventsController.deleteEventById = async (req, res) => {
 // * Function to update an event by ID
 eventsController.updateEventById = async (req, res) => {
     try {
-        const eventId = req.params.eventId;
+        const id = req.params.eventId;
 
-        if (!isValidObjectId(eventId))
-            return res.status(400).json({ message: 'Invalid event ID format' });
+        const { title, date, description, location, maplink, speakerName, thumbnail } = req.body;
 
-        const collection = mongoose.connection.collection(process.env.EVENTS_COLLECTION_NAME);
+        if (!isValidObjectId(id)) return res.status(409).json({ msg: "Invalid gallery id" })
 
-        const event = await collection.findOne({ _id: new ObjectId(eventId) });
+        const event = await Event.findById(id);
 
-        if (!event)
-            return res.status(404).json({ message: 'Event not found' });
-
-        const title = req.body.title;
-        const date = req.body.date;
-        const description = req.body.description;
-        const location = req.body.location;
-        const speakerName = req.body.speakerName;
-        const speakerCover = req.file;
-
-        let speakerCoverUrl = event.speakerCoverUrl;
-        let speakerCoverName = event.speakerCoverFileName;
-
-        if (speakerCover) {
-            await commonController.deleteFileFromFirebase(`${event.speakerCoverFileName}`);
-            const { publicUrl, fileName } = await commonController.uploadFileToFirebase(speakerCover, process.env.EVENTS_SPEAKER_COVER_FOLDER_PATH);
-            speakerCoverUrl = publicUrl;
-            speakerCoverName = fileName;
+        if (thumbnail) {
+            if (event?.thumbnail?.key && thumbnail?.key !== event.thumbnail.key) {
+                try {
+                    const deleteCommand = new DeleteObjectCommand({
+                        Bucket: Bucket,
+                        Key: event?.thumbnail?.key
+                    })
+                    const response = await s3Client.send(deleteCommand)
+                    console.log("File deleted Successfully", response)
+                }
+                catch (error) {
+                    console.log(error)
+                }
+            }
         }
 
-        await collection.updateOne({ _id: new ObjectId(eventId) }, { $set: { title: title, date: date, description: description, location: location, speakerName: speakerName, speakerCoverUrl: speakerCoverUrl, speakerCoverFileName: speakerCoverName } });
+        const updatedevent = await Event.findByIdAndUpdate(id,
+            { $set: { title, date, description, location, maplink, speakerName, thumbnail } },
+            { new: true })
 
-        return res.status(200).json({ message: 'Event updated successfully' });
+        if (!updatedevent) {
+            return res.status(500).json({ msg: 'failed' })
+        }
+
+        res.status(200).json({ result: updatedevent, msg: "success" })
 
     } catch (error) {
         console.log(error);
@@ -201,7 +195,7 @@ eventsController.deleteMultiple = async (req, res) => {
     }
 }
 
-eventsController.registerEvent = async (req, res) => {
+eventsController.postEventRegistration = async (req, res) => {
     try {
         const { event, name, phone, email, organization } = req.body;
         if (!isValidObjectId(event)) { return res.status(400).json({ msg: "Invalid Id" }) }
@@ -244,6 +238,17 @@ eventsController.getManyEventRegistrations = async (req, res) => {
     try {
         const filters = {}
 
+        const {month, year} = req.query;
+        
+        if (month && year) {
+            filters.$expr = {
+                $and: [
+                    { $eq: [{ $month: "$createdAt" }, month] },
+                    { $eq: [{ $year: "$createdAt" }, year] },
+                ],
+            }
+        }
+
         const { date } = req.query
         const searchQuery = req.query.search;
         if (searchQuery) { filters.name = { $regex: new RegExp(searchQuery, "i") } }
@@ -275,13 +280,68 @@ eventsController.getManyEventRegistrations = async (req, res) => {
             result = result.slice(((page - 1) * entries), (page * entries))
         }
 
-        res.status(200).json({ registrations : result })
+        res.status(200).json({ registrations: result })
 
     } catch (error) {
         console.log(error);
         return res.status(500).json({ message: 'Internal server error' });
     }
 }
+
+
+eventsController.updateEventRegistration = async (req, res) => {
+    try {
+        const { id } = req.params;
+        if (!isValidObjectId(id)) { return res.status(400).json({ msg: "Invalid Id" }) }
+        const { event, name, phone, email, organization } = req.body;
+
+        if (!(phone || email)) {
+            return res.status(400).json({ msg: "Insufficient Data" })
+        }
+
+        const updateObj = {};
+        for (const key of Object.keys(req.body)) {
+            if (req.body[key]) {
+                updateObj[key] = req.body[key]
+            }
+        }
+
+        const updation = await EventRegister.findByIdAndUpdate(id, {
+            $set: updateObj
+        }, { new: true })
+
+        if (!updation) {
+            return res.status(500).json({ msg: 'failed' })
+        }
+
+        res.status(200).json({ msg: "success", updation })
+    } catch (error) {
+        console.log(error);
+        return res.status(500).json({ message: 'Internal server error' });
+    }
+}
+
+eventsController.deleteEventRegistration = async (req, res) => {
+    try {
+        const Id = req.params.id;
+        if (!isValidObjectId(Id)) {
+            return res.status(400).json({ msg: "Invalid Id" })
+        }
+
+        const registration = await EventRegister.findByIdAndDelete(Id)
+        if (!registration) {
+            return res.status(500).json({ msg: 'failed' })
+        }
+
+        res.status(200).json({ msg: 'success' })
+
+    } catch (error) {
+        console.log(error);
+        return res.status(500).json({ message: 'Internal server error' });
+    }
+}
+
+
 
 // ? Export the eventsController
 export { eventsController };

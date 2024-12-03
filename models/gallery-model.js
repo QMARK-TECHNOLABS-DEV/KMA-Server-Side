@@ -7,24 +7,19 @@ const gallerySchema = new mongoose.Schema({
         ref: "events",
         required: true
     },
-    
-    fileUrl: {
-        type: String,
-        required: true
+
+    date: { type: Date, default: Date.now() },
+
+    file: {
+        type: {
+            name: { type: String },
+            location: { type: String },
+            key: { type: String },
+            size: { type: Number },
+        }
     },
-    fileName: {
-        type: String,
-        required: true
-    },
-    createdAt: {
-        type: Date,
-        default: Date.now
-    },
-    updatedAt: {
-        type: Date,
-        default: Date.now
-    }
-});
+
+}, { timestamps: true });
 
 // * Define the model for the gallery collection
 const Gallery = mongoose.model(process.env.GALLERY_COLLECTION_NAME, gallerySchema);

@@ -8,41 +8,29 @@ const eventSchema = new mongoose.Schema({
     },
     date: {
         type: String,
-        required: true
     },
     description: {
         type: String,
-        required: true
     },
-    location: {
-        type: String,
-        required: true
-    },
+    location: { type: String },
+    maplink: { type: String },
     speakerName: {
         type: String,
-        required: true
     },
-    speakerCoverUrl: {
-        type: String,
-        required: true
-    },
-    speakerCoverFileName: {
-        type: String,
-        required: true
+    thumbnail: {
+        type: {
+            name: { type: String },
+            location: { type: String },
+            key: { type: String },
+            size: { type: Number },
+        }
     },
     isArchived: {
         type: Boolean,
         default: false
     },
-    createdAt: {
-        type: Date,
-        default: Date.now
-    },
-    updatedAt: {
-        type: Date,
-        default: Date.now
-    }
-});
+
+}, { timestamps: true });
 
 // * Define the model for the events collection
 const Event = mongoose.model(process.env.EVENTS_COLLECTION_NAME, eventSchema);

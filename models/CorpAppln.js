@@ -37,6 +37,7 @@ const CorpApplnSchema = new mongoose.Schema({
                     type: {
                         name: { type: String },
                         location: { type: String },
+                        key: { type: String },
                     }
                 },
             }
@@ -60,6 +61,9 @@ const CorpApplnSchema = new mongoose.Schema({
 
     // important
     status: { type: String, default: 'pending' },
+
+    amount: {type: Number},
+    remark: {type: String},
 
 }, { timestamps: true })
 

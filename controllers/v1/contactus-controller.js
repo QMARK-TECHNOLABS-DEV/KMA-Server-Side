@@ -2,40 +2,64 @@ import mongoose from "mongoose";
 import { isValidObjectId } from "mongoose";
 import 'dotenv/config';
 import { ContactUs } from "../../models/contactus-model.js";
+import nodemailer from "nodemailer"
 
 const { ObjectId } = mongoose.Types;
 
 const contactUsController = {};
 
-// * Function to save contactus to MongoDB
-contactUsController.saveContactUsToDB = async (firstname, lastname, email, phoneNo, message) => {
-    const collection = mongoose.connection.collection(process.env.CONTACTUS_COLLECTION_NAME);
-
-    const metadata = new ContactUs({
-        firstname: firstname,
-        lastname: lastname,
-        email: email,
-        phoneNo: phoneNo,
-        message: message
-    });
-
-    await collection.insertOne(metadata);
-}
-
 // * Function to place message in contactus
 contactUsController.createContactUs = async (req, res) => {
     try {
-        const firstname = req.body.firstname;
-        const lastname = req.body.lastname;
-        const email = req.body.email;
-        const phoneNo = req.body.phoneNo;
-        const message = req.body.message;
+        const { firstname, lastname, email, phoneNo, message } = req.body;
 
         // Validate Email using regex
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (!emailRegex.test(email)) return res.status(400).json({ msg: "Invalid Email format" });    
+        if (!emailRegex.test(email)) return res.status(400).json({ msg: "Invalid Email format" });
 
-        await contactUsController.saveContactUsToDB(firstname, lastname, email, phoneNo, message);
+        const createObj = {
+            firstname, lastname, email, phoneNo, message
+        }
+
+        const saved = await ContactUs.create(createObj)
+
+        if (!saved) {
+            return res.status(500).json({ msg: 'failed' })
+        }
+
+        const htmlContent = `
+            <h2>General enquiry</h2>
+            <span> Name: ${firstname + lastname || 'NIL'}</span>
+            <hr>
+            <span> Email: ${email || 'NIL'}</span>
+            <hr>
+            <span> Phone: ${phoneNo || 'NIL'}</span>
+            <hr>
+            <span> Message: ${message || 'NIL'}</span>
+            `;
+
+        const transporter = nodemailer.createTransport({
+            service: 'gmail',
+            auth: {
+                user: process.env.MAIL_USER,
+                pass: process.env.MAIL_PASSWORD,
+            },
+        });
+
+        try {
+            const info = await transporter.sendMail({
+                from: `KMA Website`,
+                to: process.env.MAIL_RECEIVER,
+                subject: `General enquiry`,
+                text: `General enquiry`,
+                html: htmlContent
+            });
+
+            console.log("Message sent: %s", info);
+
+        } catch (error) {
+            console.log(error)
+        }
 
         return res.status(201).json({ message: 'Message sent successfully' });
     } catch (error) {
@@ -49,17 +73,28 @@ contactUsController.getAllContactUs = async (req, res) => {
     try {
         const filters = {}
 
+        const {month, year} = req.query;
+        
+        if (month && year) {
+            filters.$expr = {
+                $and: [
+                    { $eq: [{ $month: "$createdAt" }, month] },
+                    { $eq: [{ $year: "$createdAt" }, year] },
+                ],
+            }
+        }
+
         const { date } = req.query
         const searchQuery = req.query.search;
 
         if (searchQuery) {
             filters.$or = [
-              { firstname: { $regex: new RegExp(searchQuery, "i") } },
-              { lastname: { $regex: new RegExp(searchQuery, "i") } },
-              { message: { $regex: new RegExp(searchQuery, "i") } },
+                { firstname: { $regex: new RegExp(searchQuery, "i") } },
+                { lastname: { $regex: new RegExp(searchQuery, "i") } },
+                { message: { $regex: new RegExp(searchQuery, "i") } },
             ];
-          }
-          
+        }
+
 
         if (date) {
             const parsedDate = dayjs(date, 'DD-MM-YYYY');
@@ -78,7 +113,7 @@ contactUsController.getAllContactUs = async (req, res) => {
 
         const contactUs = await ContactUs.find(filters).sort({ createdAt: -1 });
 
-        return res.status(200).json({ contactUs : contactUs });
+        return res.status(200).json({ contactUs: contactUs });
     } catch (error) {
         console.log(error);
         return res.status(500).json({ message: 'Internal server error' });

@@ -6,31 +6,24 @@ const newsletterSchema = new mongoose.Schema({
         type : String,
         required : true
     },
-    fileName : {
-        type : String,
-        required : true
+    file: {
+        type: {
+            name: { type: String },
+            location: { type: String },
+            key: { type: String },
+            size: { type: Number },
+        }
     },
-    fileUrl : {
-        type : String,
-        required : true
+    thumbnail: {
+        type: {
+            name: { type: String },
+            location: { type: String },
+            key: { type: String },
+            size: { type: Number },
+        }
     },
-    coverImageUrl : {
-        type : String,
-        required : true
-    },
-    coverImageFileName : {
-        type : String,
-        required : true
-    },
-    createdAt : {
-        type : Date,
-        default : Date.now
-    },
-    updatedAt : {
-        type : Date,
-        default : Date.now
-    }
-});
+   
+},{timestamps: true});
 
 // * Define the model for the newsletter collection
 const Newsletters = mongoose.model(process.env.NEWSLETTERS_COLLECTION_NAME, newsletterSchema);

@@ -10,23 +10,16 @@ const articleSchema = new mongoose.Schema({
         type: String,
         required: true
     },
-    coverImageUrl: {
-        type: String,
-        required: true
+    thumbnail: {
+        type: {
+            name: { type: String },
+            location: { type: String },
+            key: { type: String },
+            size: { type: Number },
+        }
     },
-    coverImageFileName: {
-        type: String,
-        required: true
-    },
-    createdAt: {
-        type: Date,
-        default: Date.now
-    },
-    updatedAt: {
-        type: Date,
-        default: Date.now
-    }
-});
+   
+},{timestamps: true});
 
 // * Define the model for the articles collection
 const Articles = mongoose.model(process.env.ARTICLES_COLLECTION_NAME, articleSchema);

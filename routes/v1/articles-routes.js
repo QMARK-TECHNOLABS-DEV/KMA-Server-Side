@@ -2,11 +2,7 @@ import express from 'express';
 import 'dotenv/config';
 import { articlesController } from '../../controllers/v1/articles-controller.js';
 import { authMiddleware } from '../../middlewares/auth-middleware.js';
-import multer from 'multer';
 import { adminChecker } from '../../middlewares/adminChecker.js';
-
-// * Multer configuration
-const upload = multer();
 
 // * Create a router for articles APIs
 const articlesRouter = express.Router();
@@ -22,9 +18,9 @@ articlesRouter.use(authMiddleware);
 articlesRouter.use(adminChecker);
 
 // * Routes for Admin Dashboard (protected routes)
-articlesRouter.post('', upload.single('coverImage'), articlesController.createArticle);
+articlesRouter.post('', articlesController.createArticle);
 articlesRouter.delete('/:articleId', articlesController.deleteArticleById);
-articlesRouter.put('/:articleId', upload.single('coverImage'), articlesController.updateArticleById);
+articlesRouter.put('/:articleId', articlesController.updateArticleById);
 
 // ? Export the articlesRouter
 export { articlesRouter };

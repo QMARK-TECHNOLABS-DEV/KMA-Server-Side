@@ -8,7 +8,7 @@ const AscCorpApplnSchema = new mongoose.Schema({
     gstNum: { type: String },
 
     commnAddress: { type: String },
-    telephone: { type: String },
+    phone: { type: String },
     mobile: { type: String, unique: true },
     fax: { type: String },
     email: { type: String, unique: true },
@@ -36,6 +36,7 @@ const AscCorpApplnSchema = new mongoose.Schema({
                     type: {
                         name: { type: String },
                         location: { type: String },
+                        key: { type: String },
                     }
                 },
             }
@@ -59,6 +60,9 @@ const AscCorpApplnSchema = new mongoose.Schema({
 
     // important
     status: { type: String, default: 'pending' },
+
+    amount: {type: Number},
+    remark: {type: String},
 
 }, { timestamps: true })
 

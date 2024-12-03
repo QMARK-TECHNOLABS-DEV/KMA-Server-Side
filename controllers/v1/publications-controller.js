@@ -1,10 +1,8 @@
-import mongoose from "mongoose";
 import { isValidObjectId } from "mongoose";
 import 'dotenv/config';
 import { Publications } from "../../models/publications-model.js";
-import { commonController } from "./common-controller.js";
-
-const { ObjectId } = mongoose.Types;
+import { DeleteObjectCommand } from "@aws-sdk/client-s3";
+import { s3Client, Bucket } from "../../middlewares/multerToS3.js";
 
 const publicationsController = {};
 
@@ -17,36 +15,23 @@ dayjs.extend(timezone);
 // Set the default timezone to IST
 dayjs.tz.setDefault('Asia/Kolkata');
 
-// * Function to save publications to MongoDB
-publicationsController.savePublicationToDB = async (title, fileUrl, fileName, coverImageUrl, coverImagefileName) => {
-    const collection = mongoose.connection.collection(process.env.PUBLICATIONS_COLLECTION_NAME);
-
-    const metadata = new Publications({
-        title: title,
-        fileUrl: fileUrl,
-        fileName: fileName,
-        coverImageUrl: coverImageUrl,
-        coverImageFileName: coverImagefileName
-    });
-
-    await collection.insertOne(metadata);
-}
 
 // * Function to upload publication
 publicationsController.uploadPublication = async (req, res) => {
     try {
-        const title = req.body.title;
+        const { title, file, thumbnail } = req.body;
 
-        const file = req.files['file'] ? req.files['file'][0] : null;
-        const coverImage = req.files['coverImage'] ? req.files['coverImage'][0] : null;
+        if (!file?.location?.trim()) {
+            return res.status(400).json({ msg: "Upload a File" })
+        }
 
-        const { publicUrl: fileUrl, fileName } = await commonController.uploadFileToFirebase(file, process.env.PUBLICATIONS_FOLDER_PATH);
-        const { publicUrl: coverImageUrl, fileName: coverImageName } = await commonController.uploadFileToFirebase(coverImage, process.env.PUBLICATIONS_COVER_FOLDER_PATH);
+        const newPublication = await Publications.create({ title, file, thumbnail })
 
-        console.log(fileUrl, fileName, coverImageUrl, coverImageName);
-        await publicationsController.savePublicationToDB(title, fileUrl, fileName, coverImageUrl, coverImageName);
+        if (!newPublication) {
+            return res.status(500).json({ msg: "failed" })
+        }
 
-        return res.status(201).json({ message: 'Publication uploaded successfully' });
+        res.status(201).json({ result: newPublication, msg: "success" })
     } catch (error) {
         console.log(error);
         return res.status(500).json({ message: 'Internal server error' });
@@ -57,6 +42,17 @@ publicationsController.uploadPublication = async (req, res) => {
 publicationsController.getAllPublications = async (req, res) => {
     try {
         const filters = {}
+
+        const {month, year} = req.query;
+        
+        if (month && year) {
+            filters.$expr = {
+                $and: [
+                    { $eq: [{ $month: "$createdAt" }, month] },
+                    { $eq: [{ $year: "$createdAt" }, year] },
+                ],
+            }
+        }
 
         const { date } = req.query
 
@@ -70,13 +66,11 @@ publicationsController.getAllPublications = async (req, res) => {
                 $gte: startOfDay,
                 $lt: endOfDay
             }
-
         }
-        const collection = mongoose.connection.collection(process.env.PUBLICATIONS_COLLECTION_NAME);
 
         const publications = await Publications.find(filters).sort({ createdAt: -1 });
 
-        return res.status(200).json({ publications : publications });
+        return res.status(200).json({ publications: publications });
     } catch (error) {
         console.log(error);
         return res.status(500).json({ message: 'Internal server error' });
@@ -92,9 +86,7 @@ publicationsController.getPublicationById = async (req, res) => {
             return res.status(400).json({ message: 'Invalid publication ID' });
         }
 
-        const collection = mongoose.connection.collection(process.env.PUBLICATIONS_COLLECTION_NAME);
-
-        const publication = await collection.findOne({ _id: new ObjectId(publicationId) });
+        const publication = await Publications.findById(publicationId)
 
         if (!publication) {
             return res.status(404).json({ message: 'Publication not found' });
@@ -110,26 +102,34 @@ publicationsController.getPublicationById = async (req, res) => {
 // * Function to delete a publication by ID
 publicationsController.deletePublicationById = async (req, res) => {
     try {
-        const publicationId = req.params.publicationId;
+        const id = req.params.publicationId;
 
-        if (!isValidObjectId(publicationId)) {
-            return res.status(400).json({ message: 'Invalid publication ID' });
+        if (!isValidObjectId(id)) return res.status(409).json({ msg: "Invalid id" })
+
+        const publication = await Publication.findByIdAndDelete(id);
+        if (!publication) return res.status(404).json({ msg: "failed" })
+
+        if (publication?.file?.key) {
+            const deleteCommand = new DeleteObjectCommand({
+                Bucket: Bucket,
+                Key: publication?.file?.key
+            })
+
+            const response = await s3Client.send(deleteCommand)
+            console.log("File deleted Successfully", response)
         }
 
-        const collection = mongoose.connection.collection(process.env.PUBLICATIONS_COLLECTION_NAME);
+        if (publication?.thumbnail?.key) {
+            const deleteCommand = new DeleteObjectCommand({
+                Bucket: Bucket,
+                Key: publication?.thumbnail?.key
+            })
 
-        const publication = await collection.findOne({ _id: new ObjectId(publicationId) });
-
-        if (!publication) {
-            return res.status(404).json({ message: 'Publication not found' });
+            const response = await s3Client.send(deleteCommand)
+            console.log("thumbnail deleted Successfully", response)
         }
 
-        await commonController.deleteFileFromFirebase(publication.fileName);
-        await commonController.deleteFileFromFirebase(publication.coverImageFileName);
-
-        await collection.deleteOne({ _id: new ObjectId(publicationId) });
-
-        return res.status(200).json({ message: 'Publication deleted successfully' });
+        res.status(200).json({ msg: "success" })
     } catch (error) {
         console.log(error);
         return res.status(500).json({ message: 'Internal server error' });
@@ -139,47 +139,66 @@ publicationsController.deletePublicationById = async (req, res) => {
 // * Function to update a publication by ID
 publicationsController.updatePublicationById = async (req, res) => {
     try {
-        const publicationId = req.params.publicationId;
+        const id = req.params.publicationId;
 
-        if (!isValidObjectId(publicationId)) {
-            return res.status(400).json({ message: 'Invalid publication ID' });
+        const { title,  file, thumbnail } = req.body;
+
+        if (!isValidObjectId(id)) return res.status(409).json({ msg: "Invalid Publication id" })
+
+        const updateObj = {};
+
+        if (title?.trim()) {
+            updateObj.title = title
         }
 
-        const collection = mongoose.connection.collection(process.env.PUBLICATIONS_COLLECTION_NAME);
-
-        const publication = await collection.findOne({ _id: new ObjectId(publicationId) });
-
-        if (!publication) {
-            return res.status(404).json({ message: 'Publication not found' });
-        }
-
-        const title = req.body.title;
-
-        const file = req.files['file'] ? req.files['file'][0] : null;
-        const coverImage = req.files['coverImage'] ? req.files['coverImage'][0] : null;
-
-        let fileUrl = publication.fileUrl;
-        let fileName = publication.fileName;
-        let coverImageUrl = publication.coverImageUrl;
-        let coverImageFileName = publication.coverImageFileName;
+        const publication = await Publications.findById(id);
 
         if (file) {
-            await commonController.deleteFileFromFirebase(fileName);
-            const { publicUrl, fileName : newFileName } = await commonController.uploadFileToFirebase(file, process.env.PUBLICATIONS_FOLDER_PATH);
-            fileUrl = publicUrl;
-            fileName = newFileName;
+            if (publication?.file?.key && file?.key !== publication.file.key) {
+                try {
+                    const deleteCommand = new DeleteObjectCommand({
+                        Bucket: Bucket,
+                        Key: publication?.file?.key
+                    })
+
+                    const response = await s3Client.send(deleteCommand)
+                    console.log("File deleted Successfully", response)
+
+                }
+                catch (error) {
+                    console.log(error)
+                }
+            }
+
+            updateObj.file = file
         }
 
-        if (coverImage) {
-            await commonController.deleteFileFromFirebase(coverImageFileName);
-            const { publicUrl, fileName } = await commonController.uploadFileToFirebase(coverImage, process.env.PUBLICATIONS_COVER_FOLDER_PATH);
-            coverImageUrl = publicUrl;
-            coverImageFileName = fileName;
+        if (thumbnail) {
+            if (publication?.thumbnail?.key && thumbnail?.key !== publication.thumbnail.key) {
+                try {
+                    const deleteCommand = new DeleteObjectCommand({
+                        Bucket: Bucket,
+                        Key: publication?.thumbnail?.key
+                    })
+
+                    const response = await s3Client.send(deleteCommand)
+                    console.log("thumbnail deleted Successfully", response)
+                }
+                catch (error) {
+                    console.log(error)
+                }
+            }
+
+            updateObj.thumbnail = thumbnail
         }
 
-        await collection.updateOne({ _id: new ObjectId(publicationId) }, { $set: { title: title, fileUrl: fileUrl, fileName: fileName, coverImageUrl: coverImageUrl, coverImageFileName: coverImageFileName } });
+        const updatedPublication = await Publications.findByIdAndUpdate(id, { $set: updateObj }, { new: true })
 
-        return res.status(200).json({ message: 'Publication updated successfully' });
+        if (!updatedPublication) {
+            return res.status(500).json({ msg: 'failed' })
+        }
+
+        res.status(200).json({ result: updatedPublication, msg: "success" })
     } catch (error) {
         console.log(error);
         return res.status(500).json({ message: 'Internal server error' });

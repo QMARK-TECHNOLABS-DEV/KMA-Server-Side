@@ -1,10 +1,9 @@
-import mongoose from "mongoose";
 import { isValidObjectId } from "mongoose";
 import 'dotenv/config';
 import { Articles } from "../../models/articles-model.js";
-import { commonController } from "./common-controller.js";
 
-const { ObjectId } = mongoose.Types;
+import { DeleteObjectCommand } from "@aws-sdk/client-s3";
+import { s3Client, Bucket } from "../../middlewares/multerToS3.js";
 
 const articlesController = {};
 
@@ -17,33 +16,23 @@ dayjs.extend(timezone);
 // Set the default timezone to IST
 dayjs.tz.setDefault('Asia/Kolkata');
 
-// * Function to save articles to MongoDB
-articlesController.saveArticleToDB = async (title,coverImageUrl, coverImagefileName, content) => {
-    const collection = mongoose.connection.collection(process.env.ARTICLES_COLLECTION_NAME);
-
-    const metadata = new Articles({
-        title: title,
-        coverImageUrl: coverImageUrl,
-        coverImageFileName: coverImagefileName,
-        content: content
-    });
-
-    await collection.insertOne(metadata);
-}
 
 // * Function to create an article
 articlesController.createArticle = async (req, res) => {
     try {
-        const title = req.body.title;
-        const content = req.body.content;
-        const coverImage = req.file;
+        const { title, content, thumbnail } = req.body;
 
-        const { publicUrl: coverImageUrl, fileName: coverImageName } = await commonController.uploadFileToFirebase(coverImage, process.env.ARTICLES_COVER_FOLDER_PATH);
+        if (!(title.trim() && content?.trim())) {
+            return res.status(400).json({ message: 'Invalid data' })
+        }
 
-        console.log(coverImageUrl, coverImageName);
-        await articlesController.saveArticleToDB(title, coverImageUrl, coverImageName, content);
+        const article = await Articles.create({ title, content, thumbnail })
 
-        return res.status(201).json({ message: 'Article created successfully' });
+        if (!article) {
+            return res.status(404).json({ message: 'Article not found' });
+        }
+
+        return res.status(201).json({ message: 'success', result: article });
     } catch (error) {
         console.log(error);
         return res.status(500).json({ message: 'Internal server error' });
@@ -54,6 +43,17 @@ articlesController.createArticle = async (req, res) => {
 articlesController.getAllArticles = async (req, res) => {
     try {
         const filters = {}
+
+        const {month, year} = req.query;
+        
+        if (month && year) {
+            filters.$expr = {
+                $and: [
+                    { $eq: [{ $month: "$createdAt" }, month] },
+                    { $eq: [{ $year: "$createdAt" }, year] },
+                ],
+            }
+        }
 
         const { date } = req.query
 
@@ -69,11 +69,10 @@ articlesController.getAllArticles = async (req, res) => {
             }
 
         }
-        // const collection = mongoose.connection.collection(process.env.ARTICLES_COLLECTION_NAME);
 
         const articles = await Articles.find(filters).sort({ createdAt: -1 });
 
-        return res.status(200).json({ articles : articles });
+        return res.status(200).json({ articles: articles });
     } catch (error) {
         console.log(error);
         return res.status(500).json({ message: 'Internal server error' });
@@ -89,9 +88,7 @@ articlesController.getArticleById = async (req, res) => {
             return res.status(400).json({ message: 'Invalid article id' });
         }
 
-        const collection = mongoose.connection.collection(process.env.ARTICLES_COLLECTION_NAME);
-
-        const article = await collection.findOne({ _id: new ObjectId(id) });
+        const article = await Articles.findById(id);
 
         if (!article) {
             return res.status(404).json({ message: 'Article not found' });
@@ -113,19 +110,23 @@ articlesController.deleteArticleById = async (req, res) => {
             return res.status(400).json({ message: 'Invalid article id' });
         }
 
-        const collection = mongoose.connection.collection(process.env.ARTICLES_COLLECTION_NAME);
-
-        const article = await collection.findOne({ _id: new ObjectId(id) });
+        const article = await Articles.findByIdAndDelete(id)
 
         if (!article) {
             return res.status(404).json({ message: 'Article not found' });
         }
 
-        await commonController.deleteFileFromFirebase(`${article.coverImageFileName}`);
+        if (article?.thumbnail?.key) {
+            const deleteCommand = new DeleteObjectCommand({
+                Bucket: Bucket,
+                Key: article?.thumbnail?.key
+            })
 
-        await collection.deleteOne({ _id: new ObjectId(id) });
+            const response = await s3Client.send(deleteCommand)
+            console.log("File deleted Successfully", response)
+        }
 
-        return res.status(200).json({ message: 'Article deleted successfully' });
+        res.status(200).json({ message: 'Article deleted successfully' });
     } catch (error) {
         console.log(error);
         return res.status(500).json({ message: 'Internal server error' });
@@ -141,28 +142,43 @@ articlesController.updateArticleById = async (req, res) => {
             return res.status(400).json({ message: 'Invalid article id' });
         }
 
-        const collection = mongoose.connection.collection(process.env.ARTICLES_COLLECTION_NAME);
-
-        const article = await collection.findOne({ _id: new ObjectId(id) });
+        const article = await Articles.findById(id)
 
         if (!article) {
             return res.status(404).json({ message: 'Article not found' });
         }
 
-        const title = req.body.title;
-        const content = req.body.content;
-        const coverImage = req.file;
+        const { title, content, thumbnail } = req.body;
 
-        if(coverImage) {
-            await commonController.deleteFileFromFirebase(`${article.coverImageFileName}`);
-            const { publicUrl: coverImageUrl, fileName: coverImageName } = await commonController.uploadFileToFirebase(coverImage, process.env.ARTICLES_COVER_FOLDER_PATH);
-            await collection.updateOne({ _id: new ObjectId(id) }, { $set: { title: title, content: content, coverImageUrl: coverImageUrl, coverImageFileName: coverImageName } });
-        }
-        else {
-            await collection.updateOne({ _id: new ObjectId(id) }, { $set: { title: title, content: content } });
+        if (!(title.trim() && content?.trim())) {
+            return res.status(400).json({ message: 'Invalid data' })
         }
 
-        return res.status(200).json({ message: 'Article updated successfully' });
+        if (thumbnail) {
+            if (article?.thumbnail?.key && thumbnail?.key !== article.thumbnail.key) {
+                try {
+                    const deleteCommand = new DeleteObjectCommand({
+                        Bucket: Bucket,
+                        Key: article?.thumbnail?.key
+                    })
+
+                    const response = await s3Client.send(deleteCommand)
+                    console.log("File deleted Successfully", response)
+
+                }
+                catch (error) {
+                    console.log(error)
+                }
+            }
+        }
+
+        const updated = await Articles.findByIdAndUpdate(id, { $set: req.body }, { new: true })
+
+        if(!updated){
+            return res.status(500).json({message: 'Attempt Failed!'})
+        }
+
+        return res.status(200).json({ message: 'Article updated successfully', result: updated });
     } catch (error) {
         console.log(error);
         return res.status(500).json({ message: 'Internal server error' });

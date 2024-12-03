@@ -10,5 +10,6 @@ dashRouter.use(adminChecker)
 dashRouter.get('/member-chart', dashCtrl.memberChart)
 dashRouter.get('/analytics', dashCtrl.analytics)
 dashRouter.get('/recent-updates', dashCtrl.recentUpdates)
+dashRouter.get('/notify-count', dashCtrl.notifyCount)
 
 export {dashRouter}

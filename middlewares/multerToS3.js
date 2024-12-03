@@ -1,0 +1,36 @@
+import multer from 'multer';
+import multerS3 from 'multer-s3';
+import { S3Client } from '@aws-sdk/client-s3';
+
+const accessKeyId = process.env.DO_SPACES_ACCESS_KEY_ID;
+const secretAccessKey = process.env.DO_SPACES_SECRET_ACCESS_KEY;
+const endpoint = process.env.DO_SPACES_ENDPOINT;
+const region = process.env.DO_SPACES_REGION;
+const Bucket = process.env.DO_SPACES_BUCKET;
+
+
+const s3Client = new S3Client({
+    endpoint: endpoint,
+    region: region,
+    credentials: {
+        accessKeyId: accessKeyId,
+        secretAccessKey: secretAccessKey
+    }
+})
+
+
+const upload = multer({
+    storage: multerS3({
+        s3: s3Client,
+        bucket: Bucket,
+        key: (req, file, cb) => {
+            const uniquePrefix = Date.now().toString() + '-' + Math.round(Math.random() * 1e9)
+            cb(null, 'Media/' + `${uniquePrefix}-${file.originalname}`);
+        },
+        acl: 'public-read',
+    }),
+
+});
+
+
+export { upload, s3Client , Bucket}

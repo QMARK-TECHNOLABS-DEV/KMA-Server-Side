@@ -1,10 +1,8 @@
-import mongoose from "mongoose";
 import { isValidObjectId } from "mongoose";
 import 'dotenv/config';
 import { Magazines } from "../../models/magazine-model.js";
-import { commonController } from "./common-controller.js";
-
-const { ObjectId } = mongoose.Types;
+import { DeleteObjectCommand } from "@aws-sdk/client-s3";
+import { s3Client, Bucket } from "../../middlewares/multerToS3.js";
 
 const magazineController = {};
 
@@ -17,35 +15,21 @@ dayjs.extend(timezone);
 // Set the default timezone to IST
 dayjs.tz.setDefault('Asia/Kolkata');
 
-// * Function to save magazine to MongoDB
-magazineController.saveMagazineToDB = async (title, issuedDate, fileUrl, fileName, coverImageUrl, coverImagefileName) => {
-    const collection = mongoose.connection.collection(process.env.MAGAZINE_COLLECTION_NAME);
-
-    const metadata = new Magazines({
-        title: title,
-        issuedDate: issuedDate,
-        fileUrl: fileUrl,
-        fileName: fileName,
-        coverImageUrl: coverImageUrl,
-        coverImageFileName: coverImagefileName
-    });
-
-    await collection.insertOne(metadata);
-}
 
 // * Function to upload magazine
 magazineController.uploadMagazine = async (req, res) => {
     try {
-        const {title , issuedDate} = req.body;
+        const { title, issuedDate, file, thumbnail } = req.body;
 
-        const file = req.files['file'] ? req.files['file'][0] : null;
-        const coverImage = req.files['coverImage'] ? req.files['coverImage'][0] : null;
+        if (!title?.trim()) {
+            return res.status(400).json({ message: 'Insufficent data' })
+        }
 
-        const { publicUrl: fileUrl, fileName } = await commonController.uploadFileToFirebase(file, process.env.MAGAZINE_FOLDER_PATH);
-        const { publicUrl: coverImageUrl, fileName: coverImageName } = await commonController.uploadFileToFirebase(coverImage, process.env.MAGAZINE_COVER_FOLDER_PATH);
+        const result = await Magazines.create({ title, issuedDate, file, thumbnail });
 
-        console.log(fileUrl, fileName, coverImageUrl, coverImageName);
-        await magazineController.saveMagazineToDB(title, issuedDate , fileUrl, fileName, coverImageUrl, coverImageName);
+        if (!result) {
+            return res.status(500).json({ msg: "failed" })
+        }
 
         return res.status(201).json({ message: 'Magazine uploaded successfully' });
     } catch (error) {
@@ -58,6 +42,17 @@ magazineController.uploadMagazine = async (req, res) => {
 magazineController.getAllMagazines = async (req, res) => {
     try {
         const filters = {}
+
+        const {month, year} = req.query;
+        
+        if (month && year) {
+            filters.$expr = {
+                $and: [
+                    { $eq: [{ $month: "$createdAt" }, month] },
+                    { $eq: [{ $year: "$createdAt" }, year] },
+                ],
+            }
+        }
 
         const { date } = req.query
 
@@ -73,11 +68,10 @@ magazineController.getAllMagazines = async (req, res) => {
             }
 
         }
-        const collection = mongoose.connection.collection(process.env.MAGAZINE_COLLECTION_NAME);
 
         const magazines = await Magazines.find(filters).sort({ issuedDate: -1 });
 
-        return res.status(200).json({ magazines : magazines });
+        return res.status(200).json({ magazines: magazines });
     } catch (error) {
         console.log(error);
         return res.status(500).json({ message: 'Internal server error' });
@@ -93,9 +87,7 @@ magazineController.getMagazineById = async (req, res) => {
             return res.status(400).json({ message: 'Invalid magazine id' });
         }
 
-        const collection = mongoose.connection.collection(process.env.MAGAZINE_COLLECTION_NAME);
-
-        const magazine = await collection.findOne({ _id: new ObjectId(id) });
+        const magazine = await Magazines.findById(id)
 
         if (!magazine) {
             return res.status(404).json({ message: 'Magazine not found' });
@@ -117,23 +109,31 @@ magazineController.deleteMagazineById = async (req, res) => {
             return res.status(400).json({ message: 'Invalid magazine id' });
         }
 
-        const collection = mongoose.connection.collection(process.env.MAGAZINE_COLLECTION_NAME);
-
-        const magazine = await collection.findOne({ _id: new ObjectId(id) });
+        const magazine = await Magazines.findByIdAndDelete(id)
 
         if (!magazine) {
             return res.status(404).json({ message: 'Magazine not found' });
         }
 
-        try {
-            await commonController.deleteFileFromFirebase(magazine.fileName);
-            await commonController.deleteFileFromFirebase(magazine.coverImageFileName);
-            
-        } catch (error) {
-            console.log(error)
+        if (magazine?.file?.key) {
+            const deleteCommand = new DeleteObjectCommand({
+                Bucket: Bucket,
+                Key: magazine?.file?.key
+            })
+
+            const response = await s3Client.send(deleteCommand)
+            console.log("File deleted Successfully", response)
         }
 
-        await collection.deleteOne({ _id: new ObjectId(id) });
+        if (magazine?.thumbnail?.key) {
+            const deleteCommand = new DeleteObjectCommand({
+                Bucket: Bucket,
+                Key: magazine?.thumbnail?.key
+            })
+
+            const response = await s3Client.send(deleteCommand)
+            console.log("thumbnail deleted Successfully", response)
+        }
 
         return res.status(200).json({ message: 'Magazine deleted successfully' });
     } catch (error) {
@@ -147,54 +147,69 @@ magazineController.updateMagazineById = async (req, res) => {
     try {
         const id = req.params.magazineId;
 
-        if (!isValidObjectId(id)) {
-            return res.status(400).json({ message: 'Invalid magazine id' });
+        const { title, issuedDate, file, thumbnail } = req.body;
+
+        if (!isValidObjectId(id)) return res.status(409).json({ msg: "Invalid magazine id" })
+
+        const updateObj = {};
+
+        if (title?.trim()) {
+            updateObj.title = title
         }
 
-        const collection = mongoose.connection.collection(process.env.MAGAZINE_COLLECTION_NAME);
-
-        const magazine = await collection.findOne({ _id: new ObjectId(id) });
-
-        if (!magazine) {
-            return res.status(404).json({ message: 'Magazine not found' });
+        if (issuedDate?.trim()) {
+            updateObj.issuedDate = issuedDate
         }
 
-        const {title, issuedDate} = req.body;
-        const file = req.files['file'] ? req.files['file'][0] : null;
-        const coverImage = req.files['coverImage'] ? req.files['coverImage'][0] : null;
-
-        let fileUrl = magazine.fileUrl;
-        let fileName = magazine.fileName;
-        let coverImageUrl = magazine.coverImageUrl;
-        let coverImageFileName = magazine.coverImageFileName;
+        const magazine = await Magazines.findById(id);
 
         if (file) {
-            try {
-                await commonController.deleteFileFromFirebase(magazine.fileName);
-                
-            } catch (error) {
-                console.log(error)
+            if (magazine?.file?.key && (file?.key !== magazine.file.key)) {
+                try {
+                    const deleteCommand = new DeleteObjectCommand({
+                        Bucket: Bucket,
+                        Key: magazine?.file?.key
+                    })
+
+                    const response = await s3Client.send(deleteCommand)
+                    console.log("File deleted Successfully", response)
+
+                }
+                catch (error) {
+                    console.log(error)
+                }
             }
-            const { publicUrl, fileName : newFileName } = await commonController.uploadFileToFirebase(file, process.env.MAGAZINE_FOLDER_PATH);
-            fileUrl = publicUrl;
-            fileName = newFileName;
+
+            updateObj.file = file
         }
 
-        if (coverImage) {
-            try {
-                await commonController.deleteFileFromFirebase(magazine.coverImageFileName);
-                
-            } catch (error) {
-                console.log(error)
+        if (thumbnail) {
+            if (magazine?.thumbnail?.key && (thumbnail?.key !== magazine.thumbnail.key)) {
+                try {
+                    const deleteCommand = new DeleteObjectCommand({
+                        Bucket: Bucket,
+                        Key: magazine?.thumbnail?.key
+                    })
+
+                    const response = await s3Client.send(deleteCommand)
+                    console.log("thumbnail deleted Successfully", response)
+
+                }
+                catch (error) {
+                    console.log(error)
+                }
             }
-            const { publicUrl, fileName } = await commonController.uploadFileToFirebase(coverImage, process.env.MAGAZINE_COVER_FOLDER_PATH);
-            coverImageUrl = publicUrl;
-            coverImageFileName = fileName;
+
+            updateObj.thumbnail = thumbnail
         }
 
-        await collection.updateOne({ _id: new ObjectId(id) }, { $set: { title, issuedDate: new Date(issuedDate)  ,  fileUrl, fileName, coverImageUrl, coverImageFileName } });
+        const updatedmagazine = await Magazines.findByIdAndUpdate(id, { $set: updateObj }, { new: true })
 
-        return res.status(200).json({ message: 'Magazine updated successfully' });
+        if (!updatedmagazine) {
+            return res.status(500).json({ msg: 'failed' })
+        }
+
+        res.status(200).json({ result: updatedmagazine, msg: "success" })
     } catch (error) {
         console.log(error);
         return res.status(500).json({ message: 'Internal server error' });

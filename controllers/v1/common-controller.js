@@ -1,189 +1,62 @@
-import 'dotenv/config';
-import { admin } from '../../server.js';
-import { Readable } from 'stream';
-import sharp from 'sharp';
+import {upload} from '../../middlewares/multerToS3.js'; 
+const commonCtrl = {};
+const endpoint = process.env.DO_SPACES_ENDPOINT;
+const Bucket = process.env.DO_SPACES_BUCKET;
 
-const commonController = {};
-
-// * Function to upload file to firebase storage
-// ? Function Parameters:
-// @param file - The file to be uploaded (form-data)
-// @param folderPath - The folder path in the container
-
-commonController.uploadFileToFirebase = async (file, folderPath) => {
-    const storageRef = admin.storage().bucket(process.env.FIREBASE_STORAGE_BUCKET);
-
-    console.log(storageRef.name);
-
-    try {
-        let buffer;
-
-        // Check if the file is PNG, process accordingly
-        if (['image/png', 'image/jpeg', 'image/webp', 'image/avif'].includes(file.mimetype)) {
-            if (file.mimetype === 'image/png') {
-                buffer = await sharp(file.buffer)
-                    .resize({ width: 800 })
-                    .png({ quality: 80 })
-                    .toBuffer();
-            }
-            else {
-                // For non-PNG images (e.g., JPEG)
-                buffer = await sharp(file.buffer)
-                    .resize({ width: 800 })
-                    .jpeg({ quality: 80 })
-                    .toBuffer();
-            }
-        }
-        else {
-            buffer = file.buffer
+commonCtrl.uploadSingleFile = (req, res) => {
+    upload.single('file')(req, res, (err) => {
+        if (err) {
+            return res.status(500).json({ msg: 'File upload failed', error: err.message });
         }
 
-        const uniqueName = `${Date.now()}-${file.originalname}`;
-        const fileUpload = storageRef.file(`${folderPath}/${uniqueName}`);
+        if (!req.file) {
+            return res.status(400).json({ msg: 'No file provided' });
+        }
 
-        const writeStream = fileUpload.createWriteStream({
-            metadata: {
-                contentType: file.mimetype,
-            },
+        const file = {
+            name: req.file.originalname,
+            key: req.file.key,
+            location: `${endpoint}/${Bucket}/${req.file.key}`,
+            size: req.file.size,
+        }
+
+        return res.status(200).json({
+            msg: 'File uploaded successfully',
+            file
         });
-
-        const fileStream = Readable.from(buffer);
-
-        return new Promise((resolve, reject) => {
-            fileStream
-                .pipe(writeStream)
-                .on('error', (err) => {
-                    console.log('Error uploading file: ', err);
-                    reject(err);
-                })
-                .on('finish', async () => {
-                    try {
-                        await fileUpload.makePublic();
-                        const publicUrl = `https://storage.googleapis.com/${storageRef.name}/${fileUpload.name}`;
-                        resolve({ publicUrl, fileName: fileUpload.name });
-                    } catch (error) {
-                        reject(error);
-                    }
-                });
-        });
-    } catch (err) {
-        console.log('Error processing image:', err);
-        throw err;
-    }
+    });
 };
 
+commonCtrl.uploadMultipleFile = (req, res) => {
+    upload.array('files')(req, res, (err) => {
+        if (err) {
+            return res.status(500).json({ msg: 'File upload failed', error: err.message });
+        }
 
-// * Function to delete file from firebase storage
-// ? Function Parameters:
-// @param filePath - The path of the file to be deleted
-commonController.deleteFileFromFirebase = async (filePath) => {
-    const storageRef = admin.storage().bucket(process.env.FIREBASE_STORAGE_BUCKET);
-    const file = storageRef.file(filePath);
+        if (!req.files) {
+            return res.status(400).json({ msg: 'No file provided' });
+        }
 
-    return new Promise((resolve, reject) => {
-        file.delete()
-            .then(() => {
-                resolve();
-            })
-            .catch((err) => {
-                console.log('Error deleting file: ', err);
-                reject(err);
-            });
+        console.log({'req files': req.files})
+
+        const files = [];
+        for(const file of req.files){
+            const temp = {
+                name: file.originalname,
+                key: file.key,
+                location: `${endpoint}/${Bucket}/${file.key}`,
+                size: file.size,
+            }
+
+            files.push(temp)
+        }
+
+
+        return res.status(200).json({
+            msg: 'Files uploaded successfully',
+            files
+        });
     });
 };
 
-
-commonController.uploadMultipleFiles = async (files, folderPath) => {
-    const storageRef = admin.storage().bucket(process.env.FIREBASE_STORAGE_BUCKET);
-    console.log(storageRef.name);
-
-    const uploadSingleFile = async (file) => {
-        try {
-            let buffer;
-
-            // Check if the file is PNG, process accordingly
-            if (['image/png', 'image/jpeg', 'image/webp', 'image/avif'].includes(file.mimetype)) {
-                if (file.mimetype === 'image/png') {
-                    buffer = await sharp(file.buffer)
-                        .resize({ width: 800 })
-                        .png({ quality: 80 })
-                        .toBuffer();
-                }
-                else {
-                    // For non-PNG images (e.g., JPEG)
-                    buffer = await sharp(file.buffer)
-                        .resize({ width: 800 })
-                        .jpeg({ quality: 80 })
-                        .toBuffer();
-                }
-            }
-            else {
-                buffer = file.buffer
-            }
-
-            const uniqueName = `${Date.now()}-${file.originalname}`;
-
-            const fileUpload = storageRef.file(`${folderPath}/${uniqueName}`);
-
-            const writeStream = fileUpload.createWriteStream({
-                metadata: {
-                    contentType: file.mimetype,
-                },
-            });
-
-            const fileStream = Readable.from(buffer);
-
-            return new Promise((resolve, reject) => {
-                fileStream
-                    .pipe(writeStream)
-                    .on('error', (err) => {
-                        console.log('Error uploading file: ', err);
-                        reject(err);
-                    })
-                    .on('finish', async () => {
-                        try {
-                            await fileUpload.makePublic();
-                            const publicUrl = `https://storage.googleapis.com/${storageRef.name}/${fileUpload.name}`;
-                            resolve({ publicUrl, fileName: fileUpload.name });
-                        } catch (error) {
-                            reject(error);
-                        }
-                    });
-            });
-        } catch (err) {
-            console.log('Error processing image:', err);
-            throw err;
-        }
-    };
-
-    const uploadPromises = files.map(file => uploadSingleFile(file));
-
-    return Promise.all(uploadPromises);
-};
-
-
-
-commonController.deleteMultipleFiles = async (filePaths) => {
-    const storageRef = admin.storage().bucket(process.env.FIREBASE_STORAGE_BUCKET);
-
-    const deletePromises = filePaths.map((filePath) => {
-        const file = storageRef.file(filePath);
-
-        return new Promise((resolve, reject) => {
-            file.delete()
-                .then(() => {
-                    resolve();
-                })
-                .catch((err) => {
-                    console.log('Error deleting file: ', err);
-                    reject(err);
-                });
-        });
-    });
-
-    return Promise.all(deletePromises);
-};
-
-
-// ? Export the commonController object
-export { commonController };
+export { commonCtrl };

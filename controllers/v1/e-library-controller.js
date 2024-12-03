@@ -1,10 +1,8 @@
-import mongoose from "mongoose";
 import { isValidObjectId } from "mongoose";
 import 'dotenv/config';
 import { ELibraries } from "../../models/e-library-model.js";
-import { commonController } from "./common-controller.js";
-
-const { ObjectId } = mongoose.Types;
+import { DeleteObjectCommand } from "@aws-sdk/client-s3";
+import { s3Client, Bucket } from "../../middlewares/multerToS3.js";
 
 const eLibraryController = {};
 
@@ -17,34 +15,21 @@ dayjs.extend(timezone);
 // Set the default timezone to IST
 dayjs.tz.setDefault('Asia/Kolkata');
 
-// * Function to save e-library to MongoDB
-eLibraryController.saveELibraryToDB = async (title, fileUrl, fileName, coverImageUrl, coverImagefileName) => {
-    const collection = mongoose.connection.collection(process.env.E_LIBRARY_COLLECTION_NAME);
-
-    const metadata = new ELibraries({
-        title: title,
-        fileUrl: fileUrl,
-        fileName: fileName,
-        coverImageUrl: coverImageUrl,
-        coverImageFileName: coverImagefileName
-    });
-
-    await collection.insertOne(metadata);
-}
 
 // * Function to upload document to e-library
 eLibraryController.uploadDocument = async (req, res) => {
     try {
-        const title = req.body.title;
+        const {title, file, document} = req.body;
 
-        const file = req.files['file'] ? req.files['file'][0] : null;
-        const coverImage = req.files['coverImage'] ? req.files['coverImage'][0] : null;
+        if(!title?.trim()){
+            return res.status(400).json({message:'Invalid data'})
+        }
 
-        const { publicUrl: fileUrl, fileName } = await commonController.uploadFileToFirebase(file, process.env.E_LIBRARY_FOLDER_PATH);
-        const { publicUrl: coverImageUrl, fileName: coverImageName } = await commonController.uploadFileToFirebase(coverImage, process.env.E_LIBRARY_COVER_FOLDER_PATH);
+        const result = await ELibraries.create({title, file, document})
 
-        console.log(fileUrl, fileName, coverImageUrl, coverImageName);
-        await eLibraryController.saveELibraryToDB(title, fileUrl, fileName, coverImageUrl, coverImageName);
+        if(!result){
+            return res.status(500).json({message: 'Attempt failed'})
+        }
 
         return res.status(201).json({ message: 'Document uploaded to e-library successfully' });
     } catch (error) {
@@ -57,6 +42,17 @@ eLibraryController.uploadDocument = async (req, res) => {
 eLibraryController.getAllDocuments = async (req, res) => {
     try {
         const filters = {}
+
+        const {month, year} = req.query;
+        
+        if (month && year) {
+            filters.$expr = {
+                $and: [
+                    { $eq: [{ $month: "$createdAt" }, month] },
+                    { $eq: [{ $year: "$createdAt" }, year] },
+                ],
+            }
+        }
 
         const { date } = req.query
 
@@ -71,8 +67,6 @@ eLibraryController.getAllDocuments = async (req, res) => {
                 $lt: endOfDay
             }
         }
-
-        const collection = mongoose.connection.collection(process.env.E_LIBRARY_COLLECTION_NAME);
 
         const eLibraries = await ELibraries.find(filters).sort({ createdAt: -1 });
 
@@ -92,9 +86,7 @@ eLibraryController.getDocumentById = async (req, res) => {
             return res.status(400).json({ message: 'Invalid document id' });
         }
 
-        const collection = mongoose.connection.collection(process.env.E_LIBRARY_COLLECTION_NAME);
-
-        const eLibrary = await collection.findOne({ _id: new ObjectId(id) });
+        const eLibrary = await ELibraries.findById(id)
 
         if (!eLibrary) {
             return res.status(404).json({ message: 'Document not found' });
@@ -116,20 +108,33 @@ eLibraryController.deleteDocumentById = async (req, res) => {
             return res.status(400).json({ message: 'Invalid document id' });
         }
 
-        const collection = mongoose.connection.collection(process.env.E_LIBRARY_COLLECTION_NAME);
-
-        const eLibrary = await collection.findOne({ _id: new ObjectId(id) });
+        const eLibrary = await ELibraries.findByIdAndDelete(id)
 
         if (!eLibrary) {
             return res.status(404).json({ message: 'Document not found' });
         }
 
-        await commonController.deleteFileFromFirebase(eLibrary.fileName);
-        await commonController.deleteFileFromFirebase(eLibrary.coverImageFileName);
+        if (eLibrary?.file?.key) {
+            const deleteCommand = new DeleteObjectCommand({
+                Bucket: Bucket,
+                Key: eLibrary?.file?.key
+            })
 
-        await collection.deleteOne({ _id: new ObjectId(id) });
+            const response = await s3Client.send(deleteCommand)
+            console.log("File deleted Successfully", response)
+        }
 
-        return res.status(200).json({ message: 'Document deleted successfully' });
+        if (eLibrary?.thumbnail?.key) {
+            const deleteCommand = new DeleteObjectCommand({
+                Bucket: Bucket,
+                Key: eLibrary?.thumbnail?.key
+            })
+
+            const response = await s3Client.send(deleteCommand)
+            console.log("File deleted Successfully", response)
+        }
+
+        return res.status(200).json({ message: 'success' });
     } catch (error) {
         console.log(error);
         return res.status(500).json({ message: 'Internal server error' });
@@ -145,38 +150,52 @@ eLibraryController.updateDocumentById = async (req, res) => {
             return res.status(400).json({ message: 'Invalid document id' });
         }
 
-        const collection = mongoose.connection.collection(process.env.E_LIBRARY_COLLECTION_NAME);
-
-        const eLibrary = await collection.findOne({ _id: new ObjectId(id) });
+        const eLibrary = await ELibraries.findById(id)
 
         if (!eLibrary) {
             return res.status(404).json({ message: 'Document not found' });
         }
 
-        const title = req.body.title;
-
-        const file = req.files['file'] ? req.files['file'][0] : null;
-        const coverImage = req.files['coverImage'] ? req.files['coverImage'][0] : null;
+        const { file, thumbnail}= req.body;
 
         if (file) {
-            await commonController.deleteFileFromFirebase(eLibrary.fileName);
-            const { publicUrl: fileUrl, fileName } = await commonController.uploadFileToFirebase(file, process.env.E_LIBRARY_FOLDER_PATH);
-            eLibrary.fileUrl = fileUrl;
-            eLibrary.fileName = fileName;
+            if (eLibrary?.file?.key && file?.key !== eLibrary.file.key) {
+                try {
+                    const deleteCommand = new DeleteObjectCommand({
+                        Bucket: Bucket,
+                        Key: eLibrary?.file?.key
+                    })
+                    const response = await s3Client.send(deleteCommand)
+                    console.log("File deleted Successfully", response)
+                }
+                catch (error) {
+                    console.log(error)
+                }
+            }
+        }
+        if (thumbnail) {
+            if (eLibrary?.thumbnail?.key && thumbnail?.key !== eLibrary.thumbnail.key) {
+                try {
+                    const deleteCommand = new DeleteObjectCommand({
+                        Bucket: Bucket,
+                        Key: eLibrary?.thumbnail?.key
+                    })
+                    const response = await s3Client.send(deleteCommand)
+                    console.log("thumbnail deleted Successfully", response)
+                }
+                catch (error) {
+                    console.log(error)
+                }
+            }
         }
 
-        if (coverImage) {
-            await commonController.deleteFileFromFirebase(eLibrary.coverImageFileName);
-            const { publicUrl: coverImageUrl, fileName: coverImageName } = await commonController.uploadFileToFirebase(coverImage, process.env.E_LIBRARY_COVER_FOLDER_PATH);
-            eLibrary.coverImageUrl = coverImageUrl;
-            eLibrary.coverImageFileName = coverImageName;
+        const result = await ELibraries.findByIdAndUpdate(id, { $set: req.body }, {new:true});
+
+        if(!result){
+            return res.status(500).json({message: 'Attempt failed'})
         }
 
-        eLibrary.title = title;
-
-        await collection.updateOne({ _id: new ObjectId(id) }, { $set: eLibrary });
-
-        return res.status(200).json({ message: 'Document updated successfully' });
+        return res.status(200).json({ message: 'Document updated successfully', result });
     } catch (error) {
         console.log(error);
         return res.status(500).json({ message: 'Internal server error' });

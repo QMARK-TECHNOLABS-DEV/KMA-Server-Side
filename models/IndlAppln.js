@@ -22,9 +22,12 @@ const IndlApplnSchema = new mongoose.Schema({
     officePhone: { type: String },
 
     membershipFor: { type: String },
-    lmaName: { type: String },
-    lmaMembershipNum: { type: String },
 
+    lma: {
+        name: { type: String },
+        membershipNum: { type: String }
+    },
+    
     qualifications: [
         {
             type: {
@@ -82,6 +85,7 @@ const IndlApplnSchema = new mongoose.Schema({
         type: {
             name: { type: String },
             location: { type: String },
+            key: { type: String },
         }
     },
 
@@ -89,6 +93,7 @@ const IndlApplnSchema = new mongoose.Schema({
         type: {
             name: { type: String },
             location: { type: String },
+            key: { type: String },
         }
     },
 
@@ -96,6 +101,7 @@ const IndlApplnSchema = new mongoose.Schema({
         type: {
             name: { type: String },
             location: { type: String },
+            key: { type: String },
         }
     },
 
@@ -103,6 +109,7 @@ const IndlApplnSchema = new mongoose.Schema({
         type: {
             name: { type: String },
             location: { type: String },
+            key: { type: String },
         }
     },
 
@@ -111,6 +118,9 @@ const IndlApplnSchema = new mongoose.Schema({
 
     // important
     status: { type: String, default: 'pending' },
+
+    amount: {type: Number},
+    remark: {type: String},
 
 }, { timestamps: true })
 

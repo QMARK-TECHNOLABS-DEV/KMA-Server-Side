@@ -1,10 +1,8 @@
-import mongoose from "mongoose";
 import { isValidObjectId } from "mongoose";
 import 'dotenv/config';
 import { Reports } from "../../models/reports-model.js";
-import { commonController } from "./common-controller.js";
-
-const { ObjectId } = mongoose.Types;
+import { DeleteObjectCommand } from "@aws-sdk/client-s3";
+import { s3Client, Bucket } from "../../middlewares/multerToS3.js";
 
 const reportsController = {};
 
@@ -17,38 +15,23 @@ dayjs.extend(timezone);
 // Set the default timezone to IST
 dayjs.tz.setDefault('Asia/Kolkata');
 
-// * Function to save reports to MongoDB
-reportsController.saveReportToDB = async (title, fileUrl, fileName, coverImageUrl, coverImagefileName) => {
-    const collection = mongoose.connection.collection(process.env.REPORTS_COLLECTION_NAME);
-
-    const metadata = new Reports({
-        title: title,
-        fileUrl: fileUrl,
-        fileName: fileName,
-        coverImageUrl: coverImageUrl,
-        coverImageFileName: coverImagefileName
-    });
-
-    await collection.insertOne(metadata);
-}
 
 // * Function to create a report
 reportsController.createReport = async (req, res) => {
     try {
-        const title = req.body.title;
+        const { title, file, thumbnail } = req.body;
 
-        const coverImage = req.files['coverImage'] ? req.files['coverImage'][0] : null;
-        const file= req.files['file'] ? req.files['file'][0] : null;
+        if (!file?.location?.trim()) {
+            return res.status(400).json({ msg: "Upload a File" })
+        }
 
-        
+        const newReports = await Reports.create({ title, file, thumbnail })
 
-        const { publicUrl: fileUrl, fileName } = await commonController.uploadFileToFirebase(file, process.env.REPORTS_FOLDER_PATH);
-        const { publicUrl: coverImageUrl, fileName: coverImageName } = await commonController.uploadFileToFirebase(coverImage, process.env.REPORTS_COVER_FOLDER_PATH);
+        if (!newReports) {
+            return res.status(500).json({ msg: "failed" })
+        }
 
-        console.log(fileUrl, fileName, coverImageUrl, coverImageName);
-        await reportsController.saveReportToDB(title, fileUrl, fileName, coverImageUrl, coverImageName);
-
-        return res.status(201).json({ message: 'Report created successfully' });
+        res.status(201).json({ result: newReports, msg: "success" })
     } catch (error) {
         console.log(error);
         return res.status(500).json({ message: 'Internal server error' });
@@ -59,6 +42,17 @@ reportsController.createReport = async (req, res) => {
 reportsController.getAllReports = async (req, res) => {
     try {
         const filters = {}
+
+        const {month, year} = req.query;
+        
+        if (month && year) {
+            filters.$expr = {
+                $and: [
+                    { $eq: [{ $month: "$createdAt" }, month] },
+                    { $eq: [{ $year: "$createdAt" }, year] },
+                ],
+            }
+        }
 
         const { date } = req.query
 
@@ -74,8 +68,6 @@ reportsController.getAllReports = async (req, res) => {
             }
 
         }
-        const collection = mongoose.connection.collection(process.env.REPORTS_COLLECTION_NAME);
-
         const reports = await Reports.find(filters).sort({ createdAt: -1 });
 
         return res.status(200).json({ reports : reports });
@@ -92,9 +84,7 @@ reportsController.getReportById = async (req, res) => {
 
         if (!isValidObjectId(id)) return res.status(400).json({ message: 'Invalid Report Id' });
 
-        const collection = mongoose.connection.collection(process.env.REPORTS_COLLECTION_NAME);
-
-        const report = await collection.findOne({ _id: new ObjectId(id) });
+        const report = await Reports.findById(id)
 
         if (!report) return res.status(404).json({ message: 'Report not found' });
 
@@ -109,24 +99,33 @@ reportsController.getReportById = async (req, res) => {
 reportsController.deleteReportById = async (req, res) => {
     try {
         const id = req.params.reportId;
-        if (!isValidObjectId(id)) return res.status(400).json({ message: 'Invalid Report Id' });
 
-        const collection = mongoose.connection.collection(process.env.REPORTS_COLLECTION_NAME);
+        if (!isValidObjectId(id)) return res.status(409).json({ msg: "Invalid id" })
 
-        const report = await collection.findOne({ _id: new ObjectId(id) });
-        if (!report) return res.status(404).json({ message: 'Report not found' });
+        const report = await Reports.findByIdAndDelete(id);
+        if (!report) return res.status(404).json({ msg: "failed" })
 
-        try {
-            await commonController.deleteFileFromFirebase(report.fileName);
-            await commonController.deleteFileFromFirebase(report.coverImageFileName);
-            
-        } catch (error) {
-            console.log(error)
+        if (report?.file?.key) {
+            const deleteCommand = new DeleteObjectCommand({
+                Bucket: Bucket,
+                Key: report?.file?.key
+            })
+
+            const response = await s3Client.send(deleteCommand)
+            console.log("File deleted Successfully", response)
         }
 
-        await collection.deleteOne({ _id: new ObjectId(id) });
+        if (report?.thumbnail?.key) {
+            const deleteCommand = new DeleteObjectCommand({
+                Bucket: Bucket,
+                Key: report?.thumbnail?.key
+            })
 
-        return res.status(200).json({ message: 'Report deleted successfully' });
+            const response = await s3Client.send(deleteCommand)
+            console.log("thumbnail deleted Successfully", response)
+        }
+
+        res.status(200).json({ msg: "success" })
     } catch (error) {
         console.log(error);
         return res.status(500).json({ message: 'Internal server error' });
@@ -137,50 +136,62 @@ reportsController.deleteReportById = async (req, res) => {
 reportsController.updateReportById = async (req, res) => {
     try {
         const id = req.params.reportId;
-        if (!isValidObjectId(id)) return res.status(400).json({ message: 'Invalid Report Id' });
+        const { title,  file, thumbnail } = req.body;
 
-        const collection = mongoose.connection.collection(process.env.REPORTS_COLLECTION_NAME);
+        if (!isValidObjectId(id)) return res.status(409).json({ msg: "Invalid Publication id" })
 
-        const report = await collection.findOne({ _id: new ObjectId(id) });
-        if (!report) return res.status(404).json({ message: 'Report not found' });
+        const updateObj = {};
 
-        const title = req.body.title;
-
-        const coverImage = req.files['coverImage'] ? req.files['coverImage'][0] : null;
-        const file = req.files['file'] ? req.files['file'][0] : null;
-
-        let coverImageUrl = report.coverImageUrl;
-        let coverImageName = report.coverImageFileName;
-        let fileUrl = report.fileUrl;
-        let fileName = report.fileName;
-
-        if (coverImage) {
-            try {
-                await commonController.deleteFileFromFirebase(report.coverImageFileName);
-                
-            } catch (error) {
-                console.log(error)
-            }
-            const { publicUrl, fileName } = await commonController.uploadFileToFirebase(coverImage, process.env.REPORTS_COVER_FOLDER_PATH);
-            coverImageUrl = publicUrl;
-            coverImageName = fileName;
+        if (title?.trim()) {
+            updateObj.title = title
         }
+
+        const report = await Reports.findById(id);
 
         if (file) {
-            try {
-                await commonController.deleteFileFromFirebase(report.fileName);
-                
-            } catch (error) {
-                console.log(error)
+            if (report?.file?.key && file?.key !== report.file.key) {
+                try {
+                    const deleteCommand = new DeleteObjectCommand({
+                        Bucket: Bucket,
+                        Key: report?.file?.key
+                    })
+
+                    const response = await s3Client.send(deleteCommand)
+                    console.log("File deleted Successfully", response)
+                }
+                catch (error) {
+                    console.log(error)
+                }
             }
-            const { publicUrl, fileName : newFileName } = await commonController.uploadFileToFirebase(file, process.env.REPORTS_FOLDER_PATH);
-            fileUrl = publicUrl;
-            fileName = newFileName;
+
+            updateObj.file = file
         }
 
-        await collection.updateOne({ _id: new ObjectId(id) }, { $set: { title: title, fileUrl: fileUrl, fileName: fileName, coverImageUrl: coverImageUrl, coverImageFileName: coverImageName } });
+        if (thumbnail) {
+            if (report?.thumbnail?.key && thumbnail?.key !== report.thumbnail.key) {
+                try {
+                    const deleteCommand = new DeleteObjectCommand({
+                        Bucket: Bucket,
+                        Key: report?.thumbnail?.key
+                    })
 
-        return res.status(200).json({ message: 'Report updated successfully' });
+                    const response = await s3Client.send(deleteCommand)
+                    console.log("thumbnail deleted Successfully", response)
+                }
+                catch (error) {
+                    console.log(error)
+                }
+            }
+            updateObj.thumbnail = thumbnail
+        }
+
+        const updatedReport = await Reports.findByIdAndUpdate(id, { $set: updateObj }, { new: true })
+
+        if (!updatedReport) {
+            return res.status(500).json({ msg: 'failed' })
+        }
+
+        res.status(200).json({ result: updatedReport, msg: "success" })
     } catch (error) {
         console.log(error);
         return res.status(500).json({ message: 'Internal server error' });
