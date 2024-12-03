@@ -5,9 +5,6 @@ import jwt from 'jsonwebtoken';
 import dotenv from 'dotenv';
 import { Member } from '../../models/MemberModel.js';
 import { OtpModel } from '../../models/OtpModel.js';
-import { IndlAppln } from '../../models/IndlAppln.js';
-import { CorpAppln } from '../../models/CorpAppln.js';
-import { AscCorpAppln } from '../../models/AscCorpAppln.js';
 import nodemailer from 'nodemailer';
 import axios from 'axios';
 
@@ -296,7 +293,7 @@ authController.verifyOTPMemberLogin = async (req, res) => {
         }
 
         if (!user) {
-            return res.status(409).json({ msg: 'Blocked Member' })
+            return res.status(409).json({ msg: 'Inactive Member' })
         }
 
         const accessToken = generateAccessToken({ userId: user._id, role: user.role })
