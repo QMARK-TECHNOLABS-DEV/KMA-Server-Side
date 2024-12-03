@@ -3,6 +3,8 @@ import { v1Router } from './routes/v1-routes.js';
 import connectDB from './db.js';
 import cors from 'cors';
 import 'dotenv/config';
+import cron from 'node-cron';
+import { Member } from './models/MemberModel.js';
 
 // * Test the connection to MongoDB
 connectDB();
@@ -51,6 +53,27 @@ app.use('/api/v1', v1Router);
 
 // * Define the port for the server
 const PORT = process.env.PORT || 8080;
+
+
+// Cron job to run every day at midnight
+cron.schedule('0 0 * * *', async () => {
+  try {
+    console.log('Running daily job to update member status...');
+    
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    // Update members whose expiryDate is before today
+    const result = await Member.updateMany(
+      { expiryDate: { $lt: today }, isActive: true }, 
+      { $set: { isActive: false } } 
+    );
+
+    console.log(`Updated ${result.modifiedCount} members to inactive.`);
+  } catch (error) {
+    console.error('Error running the daily job:', error);
+  }
+});
 
 // * Start the server
 app.listen(PORT, () => {
