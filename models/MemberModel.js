@@ -1,7 +1,7 @@
 import mongoose from "mongoose";
 
 const MemberSchema = new mongoose.Schema({
-    memberType: { type: String, required: true, enum: ['individual', 'corporate', 'associate'] },
+    // memberType: { type: String, required: true, enum: ['individual', 'corporate', 'associate'] },
     applicationId: { type: mongoose.Schema.Types.ObjectId },
 
     email: { type: String, unique: true },

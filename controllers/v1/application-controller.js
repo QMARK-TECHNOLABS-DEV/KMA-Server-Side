@@ -61,8 +61,8 @@ applicationCtrl.GetAllApplications = async (req, res) => {
 
         const filters = { status: { $ne: 'approved' } }
 
-        const {month, year} = req.query;
-        
+        const { month, year } = req.query;
+
         if (month && year) {
             filters.$expr = {
                 $and: [
@@ -312,7 +312,12 @@ applicationCtrl.UpdateMembershipStatus = async (req, res) => {
             return res.status(500).json({ msg: 'failed' });
         }
 
-        const memberExistsForApln = await Member.findOne({ applicationId: application?._id, memberType: applicationType })
+        const memberExistsForApln = await Member.exists({
+            $or: [
+                { mobile: application?.mobile },
+                { email: application?.email },
+            ]
+        })
 
         if (memberExistsForApln) { return res.status(409).json({ msg: 'Member already exist' }) }
 
@@ -320,7 +325,6 @@ applicationCtrl.UpdateMembershipStatus = async (req, res) => {
             const { _id, createdAt, updatedAt, _v, ...restFields } = application;
 
             const memberObj = restFields
-            memberObj.memberType = applicationType;
             memberObj.applicationId = _id;
 
             // adding membership expiry date which is 1 year from now
