@@ -56,19 +56,9 @@ memberCtrl.GetManyMembers = async (req, res) => {
             };
         }
 
-        if (memberType) {
-            if (memberType === "individual") {
-                filters.$or = [
-                    { code: { $regex: new RegExp("INMB", "i") } },
-                    { code: { $regex: new RegExp("INLM", "i") } },
-                    { code: { $regex: new RegExp("INL_S", "i") } },
-                ];
-            } else if (memberType === "corporate") {
-                filters.code = { $regex: new RegExp("CORP", "i") };
-            } else if (memberType === "associate") {
-                filters.code = { $regex: new RegExp("ACMB", "i") };
-            }
-            
+
+        if(memberType){
+            filters.code = { $regex: new RegExp(`^${memberType}`, "i") }
         }
         
 
@@ -98,19 +88,12 @@ memberCtrl.GetManyMembers = async (req, res) => {
 
         if (searchQuery?.trim()) {
             const regexPattern = new RegExp(searchQuery, "i");
-            const searchConditions = [
+            filters.$or = [
                 { applicantName: { $regex: regexPattern } },
                 { orgName: { $regex: regexPattern } },
                 { email: { $regex: regexPattern } },
                 { mobile: { $regex: regexPattern } },
             ];
-
-            if (filters.$or) {
-                filters.$and = [{ $or: filters.$or }, { $or: searchConditions }];
-                delete filters.$or;
-            } else {
-                filters.$or = searchConditions;
-            }
         }
 
         const members = await Member.find(filters)
@@ -513,4 +496,3 @@ memberCtrl.ViewMember = async (req, res) => {
 }
 
 export { memberCtrl }
-// memberType
