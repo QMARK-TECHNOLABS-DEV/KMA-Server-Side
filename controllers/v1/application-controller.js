@@ -56,8 +56,8 @@ applicationCtrl.GetAllApplications = async (req, res) => {
         const type = req.query.type || "individual";
 
         // Paginators
-        const page = req.query.page;
-        const entries = req.query.entries;
+        const page = parseInt(req.query.page) || 1;
+        const entries = parseInt(req.query.entries) || 10;
 
         const filters = { status: { $ne: 'approved' } }
 
@@ -101,18 +101,19 @@ applicationCtrl.GetAllApplications = async (req, res) => {
         if (status) { filters.status = status }
 
         let applications = [];
+        let total = 0;
 
         if (type === "individual") {
             applications = await IndlAppln.find(filters).sort({ createdAt: -1 })
-
+            total = await IndlAppln.countDocuments(filters)
         }
         else if (type === "corporate") {
             applications = await CorpAppln.find(filters).sort({ createdAt: -1 })
-
+            total = await CorpAppln.countDocuments(filters)
         }
         else if (type === "associate") {
             applications = await AscCorpAppln.find(filters).sort({ createdAt: -1 })
-
+            total = await AscCorpAppln.countDocuments(filters)
         }
 
         let result = applications;
@@ -121,7 +122,7 @@ applicationCtrl.GetAllApplications = async (req, res) => {
             result = result.slice(((page - 1) * entries), (page * entries))
         }
 
-        res.status(200).json({ application: result })
+        res.status(200).json({ application: result, total })
     } catch (error) {
         console.log(error)
         res.status(500).json({ msg: 'Something went wrong' })
