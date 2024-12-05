@@ -56,13 +56,13 @@ applicationCtrl.GetAllApplications = async (req, res) => {
         const type = req.query.type || "individual";
 
         // Paginators
-        const page = req.query.page;
-        const entries = req.query.entries;
+        const page = parseInt(req.query.page) || 1;
+        const entries = parseInt(req.query.entries) || 10;
 
         const filters = { status: { $ne: 'approved' } }
 
-        const {month, year} = req.query;
-        
+        const { month, year } = req.query;
+
         if (month && year) {
             filters.$expr = {
                 $and: [
@@ -101,18 +101,19 @@ applicationCtrl.GetAllApplications = async (req, res) => {
         if (status) { filters.status = status }
 
         let applications = [];
+        let total = 0;
 
         if (type === "individual") {
             applications = await IndlAppln.find(filters).sort({ createdAt: -1 })
-
+            total = await IndlAppln.countDocuments(filters)
         }
         else if (type === "corporate") {
             applications = await CorpAppln.find(filters).sort({ createdAt: -1 })
-
+            total = await CorpAppln.countDocuments(filters)
         }
         else if (type === "associate") {
             applications = await AscCorpAppln.find(filters).sort({ createdAt: -1 })
-
+            total = await AscCorpAppln.countDocuments(filters)
         }
 
         let result = applications;
@@ -121,7 +122,7 @@ applicationCtrl.GetAllApplications = async (req, res) => {
             result = result.slice(((page - 1) * entries), (page * entries))
         }
 
-        res.status(200).json({ application: result })
+        res.status(200).json({ application: result, total })
     } catch (error) {
         console.log(error)
         res.status(500).json({ msg: 'Something went wrong' })
@@ -312,7 +313,12 @@ applicationCtrl.UpdateMembershipStatus = async (req, res) => {
             return res.status(500).json({ msg: 'failed' });
         }
 
-        const memberExistsForApln = await Member.findOne({ applicationId: application?._id, memberType: applicationType })
+        const memberExistsForApln = await Member.exists({
+            $or: [
+                { mobile: application?.mobile },
+                { email: application?.email },
+            ]
+        })
 
         if (memberExistsForApln) { return res.status(409).json({ msg: 'Member already exist' }) }
 
@@ -320,7 +326,6 @@ applicationCtrl.UpdateMembershipStatus = async (req, res) => {
             const { _id, createdAt, updatedAt, _v, ...restFields } = application;
 
             const memberObj = restFields
-            memberObj.memberType = applicationType;
             memberObj.applicationId = _id;
 
             // adding membership expiry date which is 1 year from now

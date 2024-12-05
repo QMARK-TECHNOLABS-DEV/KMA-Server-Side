@@ -37,102 +37,78 @@ memberCtrl.GetMember = async (req, res) => {
 
 memberCtrl.GetManyMembers = async (req, res) => {
     try {
-        //search query;
         const searchQuery = req.query.search;
         const memberType = req.query.memberType;
-        
-        // Paginators
-        const page = req.query.page;
-        const entries = req.query.entries;
-        
-        const filters = {}
-        
-        const {month, year} = req.query;
+
+        // Pagination defaults
+        const page = parseInt(req.query.page, 10) || 1;
+        const entries = parseInt(req.query.entries, 10) || 10;
+
+        const filters = {};
+        const { month, year } = req.query;
 
         if (month && year) {
             filters.$expr = {
                 $and: [
-                    { $eq: [{ $month: "$createdAt" }, month] },
-                    { $eq: [{ $year: "$createdAt" }, year] },
+                    { $eq: [{ $month: "$createdAt" }, parseInt(month)] },
+                    { $eq: [{ $year: "$createdAt" }, parseInt(year)] },
                 ],
-            }
+            };
         }
 
-        if (memberType) {
-            filters.memberType = memberType
+
+        if(memberType){
+            filters.code = { $regex: new RegExp(`^${memberType}`, "i") }
+        }
+        
+
+        const { date, status, renewal } = req.query;
+        if (status) {
+            filters.isActive = status === "active";
         }
 
-        const { date , status, renewal} = req.query
-
-        if(status){
-            if(status === 'active'){
-                filters.isActive = true
-            }
-            else if(status === 'inactive'){
-                filters.isActive = false
-            }
-        }
-
-        const today = dayjs().startOf('day');
-
-        if(renewal){
-            if(renewal === 'paid'){
-                filters.expiryDate = {
-                    $gte: today.toDate()
-                }
-            }
-            else if(renewal === 'due'){
-                filters.expiryDate = {
-                    $lt: today.toDate()
-                }
-            }
+        const today = dayjs().startOf("day");
+        if (renewal) {
+            filters.expiryDate = renewal === "paid"
+                ? { $gte: today.toDate() }
+                : { $lt: today.toDate() };
         }
 
         if (date) {
-            const parsedDate = dayjs(date, 'DD-MM-YYYY');
-
-            const startOfDay = parsedDate.startOf('day').toISOString();
-            const endOfDay = parsedDate.endOf('day').toISOString();
-
-            filters.createdAt = {
-                $gte: startOfDay,
-                $lt: endOfDay
+            const parsedDate = dayjs(date, "DD-MM-YYYY");
+            if (parsedDate.isValid()) {
+                filters.createdAt = {
+                    $gte: parsedDate.startOf("day").toDate(),
+                    $lt: parsedDate.endOf("day").toDate(),
+                };
+            } else {
+                return res.status(400).json({ msg: "Invalid date format" });
             }
-
         }
 
         if (searchQuery?.trim()) {
             const regexPattern = new RegExp(searchQuery, "i");
-            if (memberType === "individual") {
-                filters.$or = [
-                    { applicantName: { $regex: regexPattern } },
-                    { orgName: { $regex: regexPattern } },
-                    { email: { $regex: regexPattern } },
-                    { mobile: { $regex: regexPattern } },
-                ];
-            } else if (["corporate", "associate"].includes(memberType)) {
-                filters.$or = [
-                    { orgName: { $regex: regexPattern } },
-                    { email: { $regex: regexPattern } },
-                    { mobile: { $regex: regexPattern } },
-                ];
-            }
+            filters.$or = [
+                { applicantName: { $regex: regexPattern } },
+                { orgName: { $regex: regexPattern } },
+                { email: { $regex: regexPattern } },
+                { mobile: { $regex: regexPattern } },
+            ];
         }
 
-        const members = await Member.find(filters).sort({ createdAt: -1 })
+        const members = await Member.find(filters)
+            .sort({ createdAt: -1 })
+            .skip((page - 1) * entries)
+            .limit(entries);
 
-        let result = members;
+        const total = await Member.countDocuments(filters)
 
-        if (page && entries) {
-            result = result.slice(((page - 1) * entries), (page * entries))
-        }
-
-        res.status(200).json({ members: result })
+        res.status(200).json({ members, total });
     } catch (error) {
-        console.log(error)
-        res.status(500).json({ msg: 'Something went wrong' })
+        console.error(error);
+        res.status(500).json({ msg: "Something went wrong" });
     }
-}
+};
 
 
 memberCtrl.ChangeMemberActiveStatus = async (req, res) => {
@@ -212,7 +188,7 @@ memberCtrl.createIndividualMemberByAdmin = async (req, res) => {
             amount, remark
         }
 
-        createObj.memberType = "individual";
+        // createObj.memberType = "individual";
 
         // adding membership expiry date which is 1 year from now
         const expiryDate = dayjs().add(1, 'year').format('YYYY-MM-DD');
@@ -260,7 +236,7 @@ memberCtrl.createCorporateMemberByAdmin = async (req, res) => {
             code, meetReps, references, amount, remark
         };
 
-        createObj.memberType = "corporate";
+        // createObj.memberType = "corporate";
 
         // adding membership expiry date which is 1 year from now
         const expiryDate = dayjs().add(1, 'year').format('YYYY-MM-DD');
@@ -307,7 +283,7 @@ memberCtrl.createAssociateMemberByAdmin = async (req, res) => {
             code, meetReps, references, amount, remark
         };
 
-        createObj.memberType = "associate";
+        // createObj.memberType = "associate";
 
         // adding membership expiry date which is 1 year from now
         const expiryDate = dayjs().add(1, 'year').format('YYYY-MM-DD');
@@ -519,4 +495,4 @@ memberCtrl.ViewMember = async (req, res) => {
     }
 }
 
-export { memberCtrl } 
+export { memberCtrl }

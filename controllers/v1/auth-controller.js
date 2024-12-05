@@ -57,7 +57,7 @@ authController.adminSignup = async (req, res) => {
             return res.status(500).json({ message: 'failed' })
         }
 
-        res.status(201).json({message: 'success', result: savedUser});
+        res.status(201).json({ message: 'success', result: savedUser });
 
     } catch (error) {
         console.error(error);
@@ -302,7 +302,6 @@ authController.verifyOTPMemberLogin = async (req, res) => {
 
         const userInfo = {
             _id: user?._id,
-            memberType: user?.memberType,
             email: user?.email,
             mobile: user?.mobile,
             expiryDate: user?.expiryDate,
@@ -310,16 +309,8 @@ authController.verifyOTPMemberLogin = async (req, res) => {
             role: user?.role
         }
 
-        if (user?.memberType === "individual") {
-            userInfo.name = user?.applicantName;
-            userInfo.photo = user?.photo;
-        }
-        else if (user?.memberType === "corporate") {
-            userInfo.name = user?.orgName;
-        }
-        else if (user?.memberType === "associate") {
-            userInfo.name = user?.orgName;
-        }
+        userInfo.name = user?.applicantName || user?.orgName;
+        userInfo.photo = user?.photo;
 
         //delete the otp doc after use
         await OtpModel.findByIdAndDelete(validOtp?._id)
@@ -332,4 +323,4 @@ authController.verifyOTPMemberLogin = async (req, res) => {
 }
 
 // ? Exporting the authController object
-export { authController }; 
+export { authController };
