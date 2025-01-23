@@ -1,6 +1,8 @@
 import { isValidObjectId } from "mongoose";
 import { Member } from "../../models/MemberModel.js";
-import { commonController } from "./common-controller.js";
+
+import { DeleteObjectCommand } from "@aws-sdk/client-s3";
+import { s3Client, Bucket } from "../../middlewares/multerToS3.js";
 
 const applicationCtrl = {};
 
@@ -39,11 +41,7 @@ applicationCtrl.GetApplication = async (req, res) => {
 
         }
 
-        const { status, createdAt, updatedAt, __v, photo, ageProof, 
-            degreeCertificate, bioData,
-            ...restAppln } = application;
-
-        res.status(200).json({ application: restAppln })
+        res.status(200).json({ application })
     } catch (error) {
         console.log(error)
         res.status(500).json({ msg: 'Something went wrong' })
@@ -58,10 +56,21 @@ applicationCtrl.GetAllApplications = async (req, res) => {
         const type = req.query.type || "individual";
 
         // Paginators
-        const page = req.query.page;
-        const entries = req.query.entries;
+        const page = parseInt(req.query.page) || 1;
+        const entries = parseInt(req.query.entries) || 10;
 
-        const filters = {}
+        const filters = { status: { $ne: 'approved' } }
+
+        const { month, year } = req.query;
+
+        if (month && year) {
+            filters.$expr = {
+                $and: [
+                    { $eq: [{ $month: "$createdAt" }, month] },
+                    { $eq: [{ $year: "$createdAt" }, year] },
+                ],
+            }
+        }
 
         const { date } = req.query
 
@@ -78,22 +87,33 @@ applicationCtrl.GetAllApplications = async (req, res) => {
 
         }
 
-        if (searchQuery) { filters.applicantName = { $regex: new RegExp(searchQuery, "i") } }
+        if (searchQuery) {
+            const regexPattern = new RegExp(searchQuery, "i")
+
+            filters.$or = [
+                { applicantName: { $regex: regexPattern } },
+                { orgName: { $regex: regexPattern } },
+                { email: { $regex: regexPattern } },
+                { mobile: { $regex: regexPattern } },
+            ]
+        }
+
         if (status) { filters.status = status }
 
         let applications = [];
+        let total = 0;
 
         if (type === "individual") {
             applications = await IndlAppln.find(filters).sort({ createdAt: -1 })
-
+            total = await IndlAppln.countDocuments(filters)
         }
         else if (type === "corporate") {
             applications = await CorpAppln.find(filters).sort({ createdAt: -1 })
-
+            total = await CorpAppln.countDocuments(filters)
         }
         else if (type === "associate") {
             applications = await AscCorpAppln.find(filters).sort({ createdAt: -1 })
-
+            total = await AscCorpAppln.countDocuments(filters)
         }
 
         let result = applications;
@@ -102,7 +122,7 @@ applicationCtrl.GetAllApplications = async (req, res) => {
             result = result.slice(((page - 1) * entries), (page * entries))
         }
 
-        res.status(200).json({ application: result })
+        res.status(200).json({ application: result, total })
     } catch (error) {
         console.log(error)
         res.status(500).json({ msg: 'Something went wrong' })
@@ -149,7 +169,10 @@ applicationCtrl.CreateIndividualApplication = async (req, res, next) => {
             designation, residenceAddress, phone, mobile, email, officeAddress,
             officePhone, membershipFor, lmaName, lmaMembershipNum, nature,
             turnover, jobProfile,
-            hasRenewalPay, payMode,isSeniorCitizen
+            hasRenewalPay, payMode, code, isSeniorCitizen,
+            qualifications, trainings, experiences, references,
+            photo, ageProof, degreeCertificate, bioData,
+            amount, remark
         } = req.body;
 
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -164,81 +187,14 @@ applicationCtrl.CreateIndividualApplication = async (req, res, next) => {
         }
 
         const createObj = {
-            applicantName, dob, isSeniorCitizen, orgName, gstNum,
+            applicantName, dob, orgName, gstNum,
             designation, residenceAddress, phone, mobile, email, officeAddress,
             officePhone, membershipFor, lmaName, lmaMembershipNum, nature,
             turnover, jobProfile,
-            hasRenewalPay, payMode,
-        }
-
-        try {
-            if (req?.body?.qualifications) {
-                createObj.qualifications = JSON.parse(req.body.qualifications)
-            }
-            if (req?.body?.trainings) {
-                createObj.trainings = JSON.parse(req.body.trainings)
-            }
-            if (req?.body?.experiences) {
-                createObj.experiences = JSON.parse(req.body.experiences)
-            }
-            if (req?.body?.references) {
-                createObj.references = JSON.parse(req.body.references)
-            }
-
-        } catch (error) {
-            return res.status(400).json({ msg: "Invalid JSON data" });
-
-        }
-
-        if (typeof req?.body?.isSeniorCitizen === 'boolean'){
-            createObj.isSeniorCitizen = req.body.isSeniorCitizen;
-        } 
-
-        if (req.files?.photo[0]) {
-            const file = req.files?.photo[0];
-
-            const { publicUrl, fileName } = await commonController.uploadFileToFirebase(file, process.env.MEMBER_FOLDER_PATH);
-
-            createObj.photo = {
-                name: fileName,
-                location: publicUrl
-            }
-        }
-
-        if (req.files?.ageProof[0]) {
-            const file = req.files?.ageProof[0];
-
-
-            const { publicUrl, fileName } = await commonController.uploadFileToFirebase(file, process.env.MEMBER_FOLDER_PATH);
-
-            createObj.ageProof = {
-                name: fileName,
-                location: publicUrl
-            }
-        }
-
-        if (req.files?.degreeCertificate[0]) {
-            const file = req.files?.degreeCertificate[0];
-
-
-            const { publicUrl, fileName } = await commonController.uploadFileToFirebase(file, process.env.MEMBER_FOLDER_PATH);
-
-            createObj.degreeCertificate = {
-                name: fileName,
-                location: publicUrl
-            }
-        }
-
-        if (req.files?.bioData[0]) {
-            const file = req.files?.bioData[0];
-
-
-            const { publicUrl, fileName } = await commonController.uploadFileToFirebase(file, process.env.MEMBER_FOLDER_PATH);
-
-            createObj.bioData = {
-                name: fileName,
-                location: publicUrl
-            }
+            hasRenewalPay, payMode, code, isSeniorCitizen,
+            qualifications, trainings, experiences, references,
+            photo, ageProof, degreeCertificate, bioData,
+            amount, remark
         }
 
         const application = await IndlAppln.create(createObj)
@@ -258,7 +214,8 @@ applicationCtrl.CreateCorporateApplication = async (req, res, next) => {
         const {
             orgName, gstNum, postalAddress, commnAddress, phone, mobile, fax, email,
             nature, turnover, executives, supervisors, workers, capitalEmployed,
-            paidupCapital, commnMode, hasRenewalPay, payMode,
+            paidupCapital, commnMode, hasRenewalPay, payMode, code, meetReps, references,
+            amount, remark
         } = req.body;
 
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -275,36 +232,9 @@ applicationCtrl.CreateCorporateApplication = async (req, res, next) => {
         const createObj = {
             orgName, gstNum, postalAddress, commnAddress, phone, mobile, fax, email,
             nature, turnover, executives, supervisors, workers, capitalEmployed,
-            paidupCapital, commnMode, hasRenewalPay, payMode,
+            paidupCapital, commnMode, hasRenewalPay, payMode, code, meetReps, references,
+            amount, remark
         };
-
-        try {
-            if (req?.body?.meetReps) createObj.meetReps = JSON.parse(req.body.meetReps);
-            if (req?.body?.references) createObj.references = JSON.parse(req.body.references);
-        } catch (err) {
-            return res.status(400).json({ msg: "Invalid JSON data" });
-        }
-
-
-        if (req?.body?.meetReps && req.files) {
-            const photoKeys = Object.keys(req.files).filter(key => key.startsWith('photo'));
-
-            for (let photoKey of photoKeys) {
-                const file = req.files[photoKey][0];
-
-                const { publicUrl, fileName } = await commonController.uploadFileToFirebase(file, process.env.MEMBER_FOLDER_PATH);
-
-                const photoIndex = photoKey.match(/\d+/)[0];
-                const meetRepIndex = createObj?.meetReps?.findIndex((item) => item.rid == photoIndex);
-
-                if (meetRepIndex !== -1) {
-                    createObj.meetReps[meetRepIndex].photo = {
-                        name: fileName,
-                        location: publicUrl,
-                    };
-                }
-            }
-        }
 
         const application = await CorpAppln.create(createObj);
         console.log(application);
@@ -321,7 +251,8 @@ applicationCtrl.CreateAssociateCorporateApplication = async (req, res, next) => 
         const {
             orgName, gstNum, postalAddress, commnAddress, phone, mobile, fax, email,
             nature, turnover, executives, supervisors, workers, capitalEmployed,
-            paidupCapital, commnMode, hasRenewalPay, payMode,
+            paidupCapital, commnMode, hasRenewalPay, payMode, code, meetReps, references,
+            amount, remark
         } = req.body;
 
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -338,35 +269,8 @@ applicationCtrl.CreateAssociateCorporateApplication = async (req, res, next) => 
         const createObj = {
             orgName, gstNum, postalAddress, commnAddress, phone, mobile, fax, email,
             nature, turnover, executives, supervisors, workers, capitalEmployed,
-            paidupCapital, commnMode, hasRenewalPay, payMode,
+            paidupCapital, commnMode, hasRenewalPay, payMode, code, meetReps, references
         };
-
-        try {
-            if (req?.body?.meetReps) createObj.meetReps = JSON.parse(req.body.meetReps);
-            if (req?.body?.references) createObj.references = JSON.parse(req.body.references);
-        } catch (err) {
-            return res.status(400).json({ msg: "Invalid JSON data" });
-        }
-
-        if (req?.body?.meetReps && req.files) {
-            const photoKeys = Object.keys(req.files).filter(key => key.startsWith('photo'));
-
-            for (let photoKey of photoKeys) {
-                const file = req.files[photoKey][0];
-
-                const { publicUrl, fileName } = await commonController.uploadFileToFirebase(file, process.env.MEMBER_FOLDER_PATH);
-
-                const photoIndex = photoKey.match(/\d+/)[0];
-                const meetRepIndex = createObj?.meetReps?.findIndex((item) => item.rid == photoIndex);
-
-                if (meetRepIndex !== -1) {
-                    createObj.meetReps[meetRepIndex].photo = {
-                        name: fileName,
-                        location: publicUrl,
-                    };
-                }
-            }
-        }
 
         const application = await AscCorpAppln.create(createObj);
         console.log(application);
@@ -406,18 +310,22 @@ applicationCtrl.UpdateMembershipStatus = async (req, res) => {
         }
 
         if (!application) {
-            return res.status(500).json({ msg: 'Failed to update Membership status' });
+            return res.status(500).json({ msg: 'failed' });
         }
 
-        const memberExistsForApln = await Member.findOne({ applicationId: application?._id, memberType: applicationType })
+        const memberExistsForApln = await Member.exists({
+            $or: [
+                { mobile: application?.mobile },
+                { email: application?.email },
+            ]
+        })
 
         if (memberExistsForApln) { return res.status(409).json({ msg: 'Member already exist' }) }
 
         if (status === "approved") {
-            const { _id, email, mobile } = application;
+            const { _id, createdAt, updatedAt, _v, ...restFields } = application;
 
-            const memberObj = { email, mobile }
-            memberObj.memberType = applicationType;
+            const memberObj = restFields
             memberObj.applicationId = _id;
 
             // adding membership expiry date which is 1 year from now
@@ -425,16 +333,14 @@ applicationCtrl.UpdateMembershipStatus = async (req, res) => {
 
             memberObj.expiryDate = expiryDate;
 
-            console.log('memberObj', memberObj)
-
             const member = await Member.create(memberObj);
 
             if (!member) {
-                return res.status(500).json({ msg: 'Failed to create Member' });
+                return res.status(500).json({ msg: 'failed' });
             }
         }
 
-        res.status(200).json({ msg: "Membership status updated successfully" })
+        res.status(200).json({ msg: "success" })
     } catch (error) {
         console.log(error)
         res.status(500).json({ msg: 'Something went wrong' })
@@ -454,48 +360,35 @@ applicationCtrl.UpdateIndividualApplication = async (req, res) => {
             return res.status(404).json({ msg: 'Application not found' });
         }
 
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        const mobileRegex = /^[6-9]\d{9}$/;
-
-        const { email, mobile, qualifications, trainings, experiences,
-            references, lmaName, lmaMembershipNum, ...updateObj } = req.body;
-        
-        console.log({request: req.body})
-
-        if (email && emailRegex.test(email)) updateObj.email = email;
-        if (mobile && mobileRegex.test(mobile)) updateObj.mobile = mobile;
-
-        if (typeof req?.body?.isSeniorCitizen === 'boolean'){
-            console.log("senior", req.body.isSeniorCitizen)
-            updateObj.isSeniorCitizen = req.body.isSeniorCitizen;
-        } 
-
-        try {
-            ['qualifications', 'trainings', 'experiences', 'references'].forEach((field) => {
-                if (req.body[field]) {
-                    updateObj[field] = JSON.parse(req.body[field]);
-                }
-            });
-        } catch (error) {
-            return res.status(400).json({ msg: 'Invalid JSON data' });
+        if (theIndlAppln?.status === 'approved') {
+            return res.status(400).json({ msg: 'failed' })
         }
-
 
         const fileFields = ['photo', 'ageProof', 'degreeCertificate', 'bioData'];
         for (const field of fileFields) {
-            if (req.files?.[field]?.[0]) {
+            const newKey = req.body?.[field]?.key
+            const oldKey = theIndlAppln[field]?.key
+            if (newKey) {
                 // Delete old image if exists
-                if (theIndlAppln[field]?.name) {
-                    await commonController.deleteFileFromFirebase(theIndlAppln[field]?.name);
-                }
+                if (oldKey && (newKey !== oldKey)) {
+                    try {
+                        const deleteCommand = new DeleteObjectCommand({
+                            Bucket: Bucket,
+                            Key: oldKey
+                        })
 
-                const file = req.files[field][0];
-                const { publicUrl, fileName } = await commonController.uploadFileToFirebase(file, process.env.MEMBER_FOLDER_PATH);
-                updateObj[field] = { name: fileName, location: publicUrl };
+                        const response = await s3Client.send(deleteCommand)
+                        console.log("File deleted Successfully", response)
+
+                    }
+                    catch (error) {
+                        console.log(error)
+                    }
+                }
             }
         }
 
-        const application = await IndlAppln.findByIdAndUpdate(Id, { $set: updateObj }, { new: true });
+        const application = await IndlAppln.findByIdAndUpdate(Id, { $set: req.body }, { new: true });
         if (!application) {
             return res.status(404).json({ msg: 'Application update failed' });
         }
@@ -520,49 +413,31 @@ applicationCtrl.UpdateCorporateApplication = async (req, res) => {
             return res.status(404).json({ msg: 'Application not found' });
         }
 
-        const { email, mobile, meetReps, references, ...updateObj } = req.body;
-
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        const mobileRegex = /^[6-9]\d{9}$/;
-
-        if (email && emailRegex.test(email)) updateObj.email = email;
-        if (mobile && mobileRegex.test(mobile)) updateObj.mobile = mobile;
-
-        try {
-            if (meetReps) updateObj.meetReps = JSON.parse(meetReps);
-            if (references) updateObj.references = JSON.parse(references);
-        } catch (error) {
-            return res.status(400).json({ msg: 'Invalid JSON data' });
+        if (theCorpAppln?.status === 'approved') {
+            return res.status(400).json({ msg: 'failed' })
         }
 
-        // Handle photo updates for meetReps
-        if (req.files) {
-            const photoKeys = Object.keys(req.files).filter(key => key.startsWith('photo'));
-            let allMeetReps = theCorpAppln.meetReps || [];
+        const oldKeyList = theCorpAppln.meetReps.map(item => item?.photo?.key)
+        const newKeyList = req.body?.meetReps.map(item => item?.photo?.key)
 
-            await Promise.all(photoKeys.map(async (photoKey) => {
-                const photoIndex = photoKey.match(/\d+/)[0];
-                const meetRep = allMeetReps.find(item => item.rid == photoIndex);
-                const uploadFile = req.files[photoKey][0];
-
-                // Delete old photo if exists
-                if (meetRep?.photo?.name) {
-                    await commonController.deleteFileFromFirebase(meetRep.photo.name);
+        for (const oldKey of oldKeyList) {
+            // Delete old image if exists
+            if (!newKeyList?.includes(oldKey)) {
+                try {
+                    const deleteCommand = new DeleteObjectCommand({
+                        Bucket: Bucket,
+                        Key: oldKey
+                    })
+                    const response = await s3Client.send(deleteCommand)
+                    console.log("File deleted Successfully", response)
                 }
-
-                // Upload new photo
-                const { publicUrl, fileName } = await commonController.uploadFileToFirebase(uploadFile, process.env.MEMBER_FOLDER_PATH);
-                if (publicUrl && fileName) {
-                    allMeetReps = allMeetReps.map(item =>
-                        item.rid == photoIndex ? { ...item, photo: { name: fileName, location: publicUrl } } : item
-                    );
+                catch (error) {
+                    console.log(error)
                 }
-            }));
-
-            updateObj.meetReps = allMeetReps;
+            }
         }
 
-        const updatedApplication = await CorpAppln.findByIdAndUpdate(Id, { $set: updateObj }, { new: true });
+        const updatedApplication = await CorpAppln.findByIdAndUpdate(Id, { $set: req.body }, { new: true });
         if (!updatedApplication) {
             return res.status(404).json({ msg: 'Application update failed' });
         }
@@ -586,50 +461,31 @@ applicationCtrl.UpdateAssociateCorporateApplication = async (req, res) => {
             return res.status(404).json({ msg: 'Application not found' });
         }
 
-        const { email, mobile, meetReps, references, ...updateObj } = req.body;
-
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        const mobileRegex = /^[6-9]\d{9}$/;
-
-        if (email && emailRegex.test(email)) updateObj.email = email;
-        if (mobile && mobileRegex.test(mobile)) updateObj.mobile = mobile;
-
-        try {
-            if (meetReps) updateObj.meetReps = JSON.parse(meetReps);
-            if (references) updateObj.references = JSON.parse(references);
-        } catch (error) {
-            return res.status(400).json({ msg: 'Invalid JSON data' });
+        if (theAscCorpAppln?.status === 'approved') {
+            return res.status(400).json({ msg: 'failed' })
         }
 
+        const oldKeyList = theAscCorpAppln.meetReps.map(item => item?.photo?.key)
+        const newKeyList = req.body?.meetReps.map(item => item?.photo?.key)
 
-        // Handle photo updates for meetReps
-        if (req.files) {
-            const photoKeys = Object.keys(req.files).filter(key => key.startsWith('photo'));
-            let allMeetReps = theAscCorpAppln.meetReps || [];
-
-            await Promise.all(photoKeys.map(async (photoKey) => {
-                const photoIndex = photoKey.match(/\d+/)[0];
-                const meetRep = allMeetReps.find(item => item.rid == photoIndex);
-                const uploadFile = req.files[photoKey][0];
-
-                // Delete old photo if exists
-                if (meetRep?.photo?.name) {
-                    await commonController.deleteFileFromFirebase(meetRep.photo.name);
+        for (const oldKey of oldKeyList) {
+            // Delete old image if exists
+            if (!newKeyList?.includes(oldKey)) {
+                try {
+                    const deleteCommand = new DeleteObjectCommand({
+                        Bucket: Bucket,
+                        Key: oldKey
+                    })
+                    const response = await s3Client.send(deleteCommand)
+                    console.log("File deleted Successfully", response)
                 }
-
-                // Upload new photo
-                const { publicUrl, fileName } = await commonController.uploadFileToFirebase(uploadFile, process.env.MEMBER_FOLDER_PATH);
-                if (publicUrl && fileName) {
-                    allMeetReps = allMeetReps.map(item =>
-                        item.rid == photoIndex ? { ...item, photo: { name: fileName, location: publicUrl } } : item
-                    );
+                catch (error) {
+                    console.log(error)
                 }
-            }));
-
-            updateObj.meetReps = allMeetReps;
+            }
         }
 
-        const updatedApplication = await AscCorpAppln.findByIdAndUpdate(Id, { $set: updateObj }, { new: true });
+        const updatedApplication = await AscCorpAppln.findByIdAndUpdate(Id, { $set: req.body }, { new: true });
         if (!updatedApplication) {
             return res.status(404).json({ msg: 'Application update failed' });
         }
@@ -641,5 +497,33 @@ applicationCtrl.UpdateAssociateCorporateApplication = async (req, res) => {
     }
 };
 
+
+applicationCtrl.ViewApplication = async (req, res) => {
+    try {
+        const Id = req.params.id;
+        const type = req.query.type;
+
+        if (!isValidObjectId(Id)) return res.status(409).json({ msg: "Invalid id" });
+
+        let application = {};
+        if (type === "individual") {
+            application = await IndlAppln.findById(Id).lean()
+
+        }
+        else if (type === "corporate") {
+            application = await CorpAppln.findById(Id).lean()
+
+        }
+        else if (type === "associate") {
+            application = await AscCorpAppln.findById(Id).lean()
+
+        }
+
+        res.status(200).json({ application })
+    } catch (error) {
+        console.log(error)
+        res.status(500).json({ msg: 'Something went wrong' })
+    }
+}
 
 export { applicationCtrl }
