@@ -1,4 +1,4 @@
-import {memberCtrl} from "../../controllers/v1/member-controller.js";
+import { memberCtrl } from "../../controllers/v1/member-controller.js";
 import express from "express"
 const memberRouter = express.Router();
 import { authMiddleware } from "../../middlewares/auth-middleware.js";
@@ -24,11 +24,15 @@ memberRouter.post('/corporate', memberCtrl.createCorporateMemberByAdmin);
 
 memberRouter.post('/associate', memberCtrl.createAssociateMemberByAdmin);
 
+memberRouter.post('/startup', memberCtrl.createStartupMemberByAdmin);
+
 
 memberRouter.put('/individual/:id', memberCtrl.updateIndividualMember);
 
 memberRouter.put('/corporate/:id', memberCtrl.updateCorporateMember);
 
 memberRouter.put('/associate/:id', memberCtrl.updateAssociateMember);
+
+memberRouter.put('/startup/:id', memberCtrl.updateStartupMember);
 
 export { memberRouter }

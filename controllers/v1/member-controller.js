@@ -495,4 +495,99 @@ memberCtrl.ViewMember = async (req, res) => {
     }
 }
 
+// Startup
+
+memberCtrl.createStartupMemberByAdmin = async (req, res) => {
+    try {
+        const {
+            orgName,regDetails, startupyear, pincode, gstNum, postalAddress, commnAddress, phone, mobile, email,
+            nature, turnover, executives, supervisors, workers, capitalEmployed,
+            paidupCapital, commnMode, hasRenewalPay, payMode, code, meetReps, references,
+            amount, remark
+        } = req.body;
+
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        const mobileRegex = /^[6-9]\d{9}$/;
+
+        if (!((email && emailRegex.test(email)) || (mobile && mobileRegex.test(mobile)))) {
+            return res.status(400).json({ msg: "Either email or mobile number should be present" })
+        }
+
+        if (!orgName) {
+            return res.status(400).json({ msg: "Insufficient Data" });
+        }
+
+        const createObj = {
+            orgName, regDetails, startupyear, pincode, gstNum, postalAddress, commnAddress, phone, mobile, email,
+            nature, turnover, executives, supervisors, workers, capitalEmployed,
+            paidupCapital, commnMode, hasRenewalPay, payMode, status: 'approved',
+            code, meetReps, references, amount, remark
+        };
+
+        // adding membership expiry date which is 1 year from now
+        const expiryDate = dayjs().add(1, 'year').format('YYYY-MM-DD');
+
+        createObj.expiryDate = expiryDate;
+
+        const member = await Member.create(createObj);
+
+        if (!member) {
+            return res.status(500).json({ msg: 'Failed to create Member' });
+        }
+
+        res.status(200).json({ msg: "Member created" })
+    } catch (error) {
+        console.log(error)
+        res.status(500).json({ msg: 'Something went wrong' })
+    }
+}
+
+memberCtrl.updateStartupMember = async (req, res) => {
+    try {
+
+        const Id = req.params.id;
+        if (!isValidObjectId(Id)) {
+            return res.status(400).json({ msg: 'Invalid Id' });
+        }
+
+        const theMember = await Member.findById(Id);
+        if (!theMember) {
+            return res.status(404).json({ msg: 'Member not found' });
+        }
+
+        const oldKeyList = theMember.meetReps.map(item => item?.photo?.key)
+        const newKeyList = req.body?.meetReps.map(item => item?.photo?.key)
+
+        for (const oldKey of oldKeyList) {
+            // Delete old image if exists
+            if (!newKeyList?.includes(oldKey)) {
+                try {
+                    const deleteCommand = new DeleteObjectCommand({
+                        Bucket: Bucket,
+                        Key: oldKey
+                    })
+                    const response = await s3Client.send(deleteCommand)
+                    console.log("File deleted Successfully", response)
+                }
+                catch (error) {
+                    console.log(error)
+                }
+            }
+        }
+
+        const member = await Member.findByIdAndUpdate(Id, { $set: req.body }, { new: true });
+        if (!member) {
+            return res.status(404).json({ msg: 'member update failed' });
+        }
+
+        console.log(member);
+        res.status(200).json({ msg: 'Member Updated', member });
+
+    } catch (error) {
+        console.log(error)
+        res.status(500).json({ msg: 'Something went wrong' })
+    }
+}
+
+
 export { memberCtrl }

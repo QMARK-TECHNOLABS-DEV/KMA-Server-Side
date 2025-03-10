@@ -13,6 +13,8 @@ applicationRouter.post('/corporate', applicationCtrl.CreateCorporateApplication)
 
 applicationRouter.post('/associate', applicationCtrl.CreateAssociateCorporateApplication);
 
+applicationRouter.post('/startup', applicationCtrl.CreateStartupApplication);
+
 applicationRouter.use(authMiddleware)
 applicationRouter.use(adminChecker)
 
@@ -28,5 +30,7 @@ applicationRouter.put('/individual/:id', applicationCtrl.UpdateIndividualApplica
 applicationRouter.put('/corporate/:id', applicationCtrl.UpdateCorporateApplication);
 
 applicationRouter.put('/associate/:id', applicationCtrl.UpdateAssociateCorporateApplication);
+
+applicationRouter.put('/startup/:id', applicationCtrl.UpdateStartupApplication);
 
 export { applicationRouter }

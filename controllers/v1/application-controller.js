@@ -12,6 +12,7 @@ import timezone from 'dayjs/plugin/timezone.js';
 import { IndlAppln } from "../../models/IndlAppln.js";
 import { CorpAppln } from "../../models/CorpAppln.js";
 import { AscCorpAppln } from "../../models/AscCorpAppln.js";
+import { StrtpAppln } from "../../models/StrtpAppln.js";
 dayjs.extend(utc);
 dayjs.extend(timezone);
 
@@ -38,6 +39,10 @@ applicationCtrl.GetApplication = async (req, res) => {
         }
         else if (type === "associate") {
             application = await AscCorpAppln.findById(Id).lean()
+
+        }
+        else if (type === "startup") {
+            application = await StrtpAppln.findById(Id).lean()
 
         }
 
@@ -101,19 +106,18 @@ applicationCtrl.GetAllApplications = async (req, res) => {
         if (status) { filters.status = status }
 
         let applications = [];
-        let total = 0;
 
         if (type === "individual") {
             applications = await IndlAppln.find(filters).sort({ createdAt: -1 })
-            total = await IndlAppln.countDocuments(filters)
         }
         else if (type === "corporate") {
             applications = await CorpAppln.find(filters).sort({ createdAt: -1 })
-            total = await CorpAppln.countDocuments(filters)
         }
         else if (type === "associate") {
             applications = await AscCorpAppln.find(filters).sort({ createdAt: -1 })
-            total = await AscCorpAppln.countDocuments(filters)
+        }
+        else if (type === "startup") {
+            applications = await StrtpAppln.find(filters).sort({ createdAt: -1 })
         }
 
         let result = applications;
@@ -122,7 +126,7 @@ applicationCtrl.GetAllApplications = async (req, res) => {
             result = result.slice(((page - 1) * entries), (page * entries))
         }
 
-        res.status(200).json({ application: result, total })
+        res.status(200).json({ application: result, total: applications?.length ?? 0 })
     } catch (error) {
         console.log(error)
         res.status(500).json({ msg: 'Something went wrong' })
@@ -134,24 +138,29 @@ applicationCtrl.applicationCount = async (req, res) => {
     try {
 
         const [
-            pendingI, pendingC, pendingA,
-            approvedI, approvedC, approvedA,
-            rejectedI, rejectedC, rejectedA
+            pendingI, pendingC, pendingA, pendingS,
+            approvedI, approvedC, approvedA, approvedS,
+            rejectedI, rejectedC, rejectedA, rejectedS,
         ] = await Promise.all([
             IndlAppln.countDocuments({ status: 'pending' }),
             CorpAppln.countDocuments({ status: 'pending' }),
             AscCorpAppln.countDocuments({ status: 'pending' }),
+            StrtpAppln.countDocuments({ status: 'pending' }),
+
             IndlAppln.countDocuments({ status: 'approved' }),
             CorpAppln.countDocuments({ status: 'approved' }),
             AscCorpAppln.countDocuments({ status: 'approved' }),
+            StrtpAppln.countDocuments({ status: 'approved' }),
+
             IndlAppln.countDocuments({ status: 'rejected' }),
             CorpAppln.countDocuments({ status: 'rejected' }),
-            AscCorpAppln.countDocuments({ status: 'rejected' })
+            AscCorpAppln.countDocuments({ status: 'rejected' }),
+            StrtpAppln.countDocuments({ status: 'rejected' }),
         ]);
 
-        const pending = pendingI + pendingC + pendingA;
-        const approved = approvedI + approvedC + approvedA;
-        const rejected = rejectedI + rejectedC + rejectedA;
+        const pending = pendingI + pendingC + pendingA + pendingS;
+        const approved = approvedI + approvedC + approvedA + approvedS;
+        const rejected = rejectedI + rejectedC + rejectedA + rejectedS;
 
         res.status(200).json({ pending, approved, rejected });
 
@@ -307,6 +316,11 @@ applicationCtrl.UpdateMembershipStatus = async (req, res) => {
                 $set: { status }
             }, { new: true }).lean()
 
+        }
+        else if (applicationType === "startup") {
+            application = await StrtpAppln.findByIdAndUpdate(Id, {
+                $set: { status }
+            }, { new: true }).lean()
         }
 
         if (!application) {
@@ -516,7 +530,9 @@ applicationCtrl.ViewApplication = async (req, res) => {
         }
         else if (type === "associate") {
             application = await AscCorpAppln.findById(Id).lean()
-
+        }
+        else if (type === "startup") {
+            application = await StrtpAppln.findById(Id).lean()
         }
 
         res.status(200).json({ application })
@@ -525,5 +541,92 @@ applicationCtrl.ViewApplication = async (req, res) => {
         res.status(500).json({ msg: 'Something went wrong' })
     }
 }
+
+// starttup
+
+applicationCtrl.CreateStartupApplication = async (req, res, next) => {
+    try {
+        const {
+            orgName, regDetails, startupyear, pincode, gstNum, postalAddress, commnAddress, phone, mobile, email,
+            nature, turnover, executives, supervisors, workers, capitalEmployed,
+            paidupCapital, commnMode, hasRenewalPay, payMode, code, meetReps, references,
+            amount, remark
+        } = req.body;
+
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        const mobileRegex = /^[6-9]\d{9}$/;
+
+        if (!((email && emailRegex.test(email)) || (mobile && mobileRegex.test(mobile)))) {
+            return res.status(400).json({ msg: "Either email or mobile number should be present" })
+        }
+
+        if (!(orgName && payMode)) {
+            return res.status(400).json({ msg: "Insufficient Data" });
+        }
+
+        const createObj = {
+            orgName, regDetails, startupyear, pincode, gstNum, postalAddress, commnAddress, phone, mobile, email,
+            nature, turnover, executives, supervisors, workers, capitalEmployed,
+            paidupCapital, commnMode, hasRenewalPay, payMode, code, meetReps, references,
+            amount, remark
+        };
+
+        const application = await StrtpAppln.create(createObj);
+        console.log(application);
+
+        return res.status(200).json({ msg: "Initiated Registration Process" });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ msg: "Something went wrong" });
+    }
+};
+
+applicationCtrl.UpdateStartupApplication = async (req, res) => {
+    try {
+        const Id = req.params.id;
+        if (!isValidObjectId(Id)) {
+            return res.status(400).json({ msg: 'Invalid Id' });
+        }
+
+        const theStrtpAppln = await StrtpAppln.findById(Id);
+        if (!theStrtpAppln) {
+            return res.status(404).json({ msg: 'Application not found' });
+        }
+
+        if (theStrtpAppln?.status === 'approved') {
+            return res.status(400).json({ msg: 'failed' })
+        }
+
+        const oldKeyList = theStrtpAppln.meetReps.map(item => item?.photo?.key)
+        const newKeyList = req.body?.meetReps.map(item => item?.photo?.key)
+
+        for (const oldKey of oldKeyList) {
+            // Delete old image if exists
+            if (!newKeyList?.includes(oldKey)) {
+                try {
+                    const deleteCommand = new DeleteObjectCommand({
+                        Bucket: Bucket,
+                        Key: oldKey
+                    })
+                    const response = await s3Client.send(deleteCommand)
+                    console.log("File deleted Successfully", response)
+                }
+                catch (error) {
+                    console.log(error)
+                }
+            }
+        }
+
+        const updatedApplication = await StrtpAppln.findByIdAndUpdate(Id, { $set: req.body }, { new: true });
+        if (!updatedApplication) {
+            return res.status(404).json({ msg: 'Application update failed' });
+        }
+
+        res.status(200).json({ msg: 'Application Updated', application: updatedApplication });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ msg: 'Something went wrong' });
+    }
+};
 
 export { applicationCtrl }
